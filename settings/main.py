@@ -8,7 +8,6 @@ from .workfile_builder import WorkfileBuilderPlugin
 
 class AfterEffectsSettings(BaseSettingsModel):
     """AfterEffects Project Settings."""
-    _layout = "expanded"
     create: AfterEffectsCreatorPlugins = Field(
         default_factory=AfterEffectsCreatorPlugins,
         title="Creator plugins"
