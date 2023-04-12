@@ -1,6 +1,6 @@
 from pydantic import Field
 
-from openpype.settings import BaseSettingsModel
+from ayon_server.settings import BaseSettingsModel
 
 
 class ValidateSceneSettingsPlugin(BaseSettingsModel):
@@ -27,4 +27,3 @@ class AfterEffectsPublishPlugins(BaseSettingsModel):
         title="Validate Scene Settings",
         default_factory=ValidateSceneSettingsPlugin,
     )
-

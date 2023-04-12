@@ -1,21 +1,6 @@
 from pydantic import Field
 
-from openpype.settings import BaseSettingsModel
-
-
-class PathsTemplate(BaseSettingsModel):
-    windows: str = Field(
-        '',
-        title="Windows"
-    )
-    darwin: str = Field(
-        '',
-        title="MacOS"
-    )
-    linux: str = Field(
-        '',
-        title="Linux"
-    )
+from ayon_server.settings import BaseSettingsModel, MultiplatformPathModel
 
 
 class CustomBuilderTemplate(BaseSettingsModel):
@@ -23,8 +8,8 @@ class CustomBuilderTemplate(BaseSettingsModel):
         default_factory=list,
         title="Task types",
     )
-    template_path: PathsTemplate = Field(
-        default_factory=PathsTemplate
+    template_path: MultiplatformPathModel = Field(
+        default_factory=MultiplatformPathModel
     )
 
 
@@ -38,6 +23,3 @@ class WorkfileBuilderPlugin(BaseSettingsModel):
     custom_templates: list[CustomBuilderTemplate] = Field(
         default_factory=CustomBuilderTemplate
     )
-
-
-
