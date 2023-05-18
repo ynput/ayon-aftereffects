@@ -32,12 +32,16 @@ class AfterEffectsSettings(BaseSettingsModel):
 DEFAULT_AFTEREFFECTS_SETTING = {
     "create": {
         "RenderCreator": {
+            "mark_for_review": True,
             "defaults": [
                 "Main"
             ]
         }
     },
     "publish": {
+        "CollectReview": {
+            "enabled": True
+        },
         "ValidateSceneSettings": {
             "enabled": True,
             "optional": True,

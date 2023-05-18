@@ -3,6 +3,10 @@ from pydantic import Field
 from ayon_server.settings import BaseSettingsModel
 
 
+class CollectReviewPluginModel(BaseSettingsModel):
+    enabled: bool = Field(True, title="Enabled")
+
+
 class ValidateSceneSettingsPlugin(BaseSettingsModel):
     """Validate naming of subsets and layers"""  #
     _isGroup = True
@@ -22,7 +26,10 @@ class ValidateSceneSettingsPlugin(BaseSettingsModel):
 
 
 class AfterEffectsPublishPlugins(BaseSettingsModel):
-
+    CollectReview: CollectReviewPluginModel = Field(
+        default_facotory=CollectReviewPluginModel,
+        title="Collect Review"
+    )
     ValidateSceneSettings: ValidateSceneSettingsPlugin = Field(
         title="Validate Scene Settings",
         default_factory=ValidateSceneSettingsPlugin,
