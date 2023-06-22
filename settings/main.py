@@ -1,6 +1,7 @@
 from pydantic import Field
-from ayon_server.settings import BaseSettingsModel, ImageIOBaseModel
+from ayon_server.settings import BaseSettingsModel
 
+from .imageio import AfterEffectsImageIOModel
 from .creator_plugins import AfterEffectsCreatorPlugins
 from .publish_plugins import AfterEffectsPublishPlugins
 from .workfile_builder import WorkfileBuilderPlugin
@@ -9,8 +10,8 @@ from .workfile_builder import WorkfileBuilderPlugin
 class AfterEffectsSettings(BaseSettingsModel):
     """AfterEffects Project Settings."""
 
-    imageio: ImageIOBaseModel = Field(
-        default_factory=ImageIOBaseModel,
+    imageio: AfterEffectsImageIOModel = Field(
+        default_factory=AfterEffectsImageIOModel,
         title="OCIO config"
     )
     create: AfterEffectsCreatorPlugins = Field(
