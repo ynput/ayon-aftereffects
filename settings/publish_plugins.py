@@ -8,7 +8,7 @@ class CollectReviewPluginModel(BaseSettingsModel):
 
 
 class ValidateSceneSettingsPlugin(BaseSettingsModel):
-    """Validate naming of subsets and layers"""  #
+    """Validate naming of products and layers"""  #
     _isGroup = True
     enabled: bool = True
     optional: bool = Field(False, title="Optional")
