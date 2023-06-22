@@ -1,6 +1,6 @@
 from ayon_server.addons import BaseServerAddon
 
-from .settings.main import AfterEffectsSettings, DEFAULT_AFTEREFFECTS_SETTING
+from .settings import AfterEffectsSettings, DEFAULT_AFTEREFFECTS_SETTING
 from .version import __version__
 
 
