@@ -3,6 +3,7 @@ import re
 import json
 import contextlib
 import logging
+import pyblish
 
 import ayon_api
 
@@ -162,3 +163,47 @@ def set_settings(frames, resolution, comp_ids=None, print_msg=True):
                                  fps, width, height)
         if print_msg:
             stub.print_msg(msg)
+
+
+def find_close_plugin(close_plugin_name, log):
+    if close_plugin_name:
+        plugins = pyblish.api.discover()
+        for plugin in plugins:
+            if plugin.__name__ == close_plugin_name:
+                return plugin
+
+    log.debug("Close plugin not found, app might not close.")
+
+
+def publish_in_test(log, close_plugin_name=None):
+    """Loops through all plugins, logs to console. Used for tests.
+
+    Args:
+        log (Logger)
+        close_plugin_name (Optional[str]): Name of plugin with responsibility
+            to close application.
+    """
+
+    # Error exit as soon as any error occurs.
+    error_format = "Failed {plugin.__name__}: {error} -- {error.traceback}"
+    log.info("here")
+    print("here")
+    close_plugin = find_close_plugin(close_plugin_name, log)
+
+    for result in pyblish.util.publish_iter():
+        for record in result["records"]:
+            # Why do we log again? pyblish logger is logging to stdout...
+            log.info("{}: {}".format(result["plugin"].label, record.msg))
+
+        if not result["error"]:
+            continue
+
+        # QUESTION We don't break on error?
+        error_message = error_format.format(**result)
+        log.error(error_message)
+        if close_plugin:  # close host app explicitly after error
+            context = pyblish.api.Context()
+            try:
+                close_plugin().process(context)
+            except Exception as exp:
+                print(exp)
