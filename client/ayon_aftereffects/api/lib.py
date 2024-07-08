@@ -186,8 +186,6 @@ def publish_in_test(log, close_plugin_name=None):
 
     # Error exit as soon as any error occurs.
     error_format = "Failed {plugin.__name__}: {error} -- {error.traceback}"
-    log.info("here")
-    print("here")
     close_plugin = find_close_plugin(close_plugin_name, log)
 
     for result in pyblish.util.publish_iter():
