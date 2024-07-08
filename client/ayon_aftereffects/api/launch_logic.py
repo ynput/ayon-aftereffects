@@ -47,7 +47,7 @@ def main(*subprocess_args):
     launcher = ProcessLauncher(subprocess_args)
     launcher.start()
 
-    if os.environ.get("AYON_IN_TESTS"):
+    if is_in_tests():
         manager = AddonsManager()
         aftereffects_addon = manager["aftereffects"]
 
