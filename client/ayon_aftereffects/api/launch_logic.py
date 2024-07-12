@@ -47,16 +47,15 @@ def main(*subprocess_args):
     launcher = ProcessLauncher(subprocess_args)
     launcher.start()
 
-    if os.environ.get("HEADLESS_PUBLISH"):
+    if is_in_tests():
         manager = AddonsManager()
-        webpublisher_addon = manager["webpublisher"]
+        aftereffects_addon = manager["aftereffects"]
 
         launcher.execute_in_main_thread(
             functools.partial(
-                webpublisher_addon.headless_publish,
+                aftereffects_addon.publish_in_test,
                 log,
                 "CloseAE",
-                is_in_tests()
             )
         )
 
