@@ -137,4 +137,6 @@ class CollectExistingFrames(pyblish.api.InstancePlugin):
             first_slash_index = path.find("/")
             path = f"{path[0:first_slash_index]}:{path[first_slash_index:]}"
 
+        path = os.path.expanduser(path)
+
         return path
