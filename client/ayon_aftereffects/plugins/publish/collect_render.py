@@ -140,13 +140,11 @@ class CollectAERender(publish.AbstractCollectRender):
             instance.comp_name = comp.name
             instance.comp_id = comp_id
 
-            is_local = "renderLocal" in inst.data["family"]  # legacy
-            if inst.data.get("creator_attributes"):
-                is_local = not inst.data["creator_attributes"].get("farm")
-            if is_local:
+            creator_attributes = inst.data["creator_attributes"]
+            if creator_attributes["render_target"] == "local":
                 # for local renders
                 instance = self._update_for_local(instance, project_entity)
-            else:
+            elif creator_attributes["render_target"] == "farm":
                 fam = "render.farm"
                 if fam not in instance.families:
                     instance.families.append(fam)

@@ -27,6 +27,12 @@ class RenderCreator(Creator):
 
     create_allow_context_change = True
 
+    rendering_targets = {
+        "local": "Local machine rendering",
+        "farm": "Farm rendering",
+        "frames": "Use existing frames"
+    }
+
     # Settings
     mark_for_review = True
     force_setting_values = True
@@ -89,12 +95,6 @@ class RenderCreator(Creator):
             new_instance = CreatedInstance(
                 self.product_type, comp_product_name, data, self
             )
-            if "farm" in pre_create_data:
-                use_farm = pre_create_data["farm"]
-                new_instance.creator_attributes["farm"] = use_farm
-
-            if pre_create_data["render_target"] == "frames":
-                new_instance.creator_attributes["frames"] = True
 
             review = pre_create_data["mark_for_review"]
             new_instance.creator_attributes["mark_for_review"] = review
@@ -108,12 +108,6 @@ class RenderCreator(Creator):
                 set_settings(True, True, [comp.id], print_msg=False)
 
     def get_pre_create_attr_defs(self):
-        rendering_targets = {
-            "local": "Local machine rendering",
-            "farm": "Farm rendering",
-            "frames": "Use existing frames"
-        }
-
         output = [
             BoolDef("use_selection",
                     tooltip="Composition for publishable instance should be "
@@ -124,7 +118,7 @@ class RenderCreator(Creator):
             UISeparatorDef(),
             EnumDef(
                 "render_target",
-                items=rendering_targets,
+                items=self.rendering_targets,
                 label="Render target"
             ),
             BoolDef(
@@ -137,18 +131,16 @@ class RenderCreator(Creator):
 
     def get_instance_attr_defs(self):
         return [
-            BoolDef("farm", label="Render on farm"),
+            EnumDef(
+                "render_target",
+                items=self.rendering_targets,
+                label="Render target"
+            ),
             BoolDef(
                 "mark_for_review",
                 label="Review",
                 default=False
-            ),
-            BoolDef(
-                "frames",
-                label="Existing frames",
-                default=False,
-                hidden=True
-            ),
+            )
         ]
 
     def get_icon(self):
