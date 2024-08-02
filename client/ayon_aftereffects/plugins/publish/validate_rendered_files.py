@@ -28,9 +28,13 @@ class ValidateRenderedFiles(pyblish.api.InstancePlugin):
 
     def process(self, instance):
         """Plugin entry point."""
-        use_existing_frames = instance.data["creator_attributes"]["frames"]
+        use_existing_frames = (
+            instance.data["creator_attributes"]
+                         ["render_target"] == "frames"
+        )
 
         if not use_existing_frames:
+            self.log.debug("Not using existing frames, skipping")
             return
 
         expected_files = {os.path.basename(file_path)
@@ -56,3 +60,5 @@ class ValidateRenderedFiles(pyblish.api.InstancePlugin):
                     sorted(collected_files)
                 )
             )
+        else:
+            self.log.debug("Matching expected and found files")

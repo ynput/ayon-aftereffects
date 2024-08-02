@@ -24,16 +24,20 @@ class CollectExistingFrames(pyblish.api.InstancePlugin):
     """
 
     order = pyblish.api.CollectorOrder + 0.150
-    label = "Collect Exiting Frames"
+    label = "Collect After Effects Existing Frames"
     hosts = ["aftereffects"]
     families = ["render"]
 
     settings_category = "aftereffects"
 
     def process(self, instance):
-        use_existing_frames = instance.data["creator_attributes"]["frames"]
+        use_existing_frames = (
+            instance.data["creator_attributes"]
+                         ["render_target"] == "frames"
+        )
 
         if not use_existing_frames:
+            self.log.debug("Not using existing frames, skipping")
             return
 
         render_queue_file_paths = instance.data["render_queue_file_paths"]
@@ -61,7 +65,7 @@ class CollectExistingFrames(pyblish.api.InstancePlugin):
                 raise KnownPublishError(
                     "Multiple render queues detected "
                     "with same extension. \n"
-                     "Please change one the extensions!"
+                    "Please change one the extensions!"
                 )
 
             folders_by_ext[render_queue_extension] = render_queue_folder
@@ -72,7 +76,8 @@ class CollectExistingFrames(pyblish.api.InstancePlugin):
                 files_by_ext[render_queue_extension].append(file_name)
 
         if not files_by_ext:
-            self.log.info("no files")
+            self.log.warning("No expected files collected, "
+                             "problem with render directory.")
             return
 
         representations = []
