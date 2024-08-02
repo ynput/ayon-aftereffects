@@ -17,6 +17,8 @@ class CollectExistingFrames(pyblish.api.InstancePlugin,
     These files might exist there from test render, triggered manually by
     artist, now its only about collecting and publishing them to save time.
 
+    This is prepared for multiple output modules in Render Queue, which is not
+    currently allowed, but might be in the future.
     It is expected if there are multiple output modules per Render Queue,
     they must have different extension!
 
