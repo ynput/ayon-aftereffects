@@ -1,7 +1,7 @@
 import re
 
 from ayon_core import resources
-from ayon_core.lib import BoolDef, UISeparatorDef
+from ayon_core.lib import BoolDef, UISeparatorDef, EnumDef
 from ayon_core.pipeline import (
     Creator,
     CreatedInstance,
@@ -93,6 +93,9 @@ class RenderCreator(Creator):
                 use_farm = pre_create_data["farm"]
                 new_instance.creator_attributes["farm"] = use_farm
 
+            if pre_create_data["render_target"] == "frames":
+                new_instance.creator_attributes["frames"] = True
+
             review = pre_create_data["mark_for_review"]
             new_instance.creator_attributes["mark_for_review"] = review
 
@@ -105,6 +108,12 @@ class RenderCreator(Creator):
                 set_settings(True, True, [comp.id], print_msg=False)
 
     def get_pre_create_attr_defs(self):
+        rendering_targets = {
+            "local": "Local machine rendering",
+            "farm": "Farm rendering",
+            "frames": "Use existing frames"
+        }
+
         output = [
             BoolDef("use_selection",
                     tooltip="Composition for publishable instance should be "
@@ -113,7 +122,11 @@ class RenderCreator(Creator):
             BoolDef("use_composition_name",
                     label="Use composition name in product"),
             UISeparatorDef(),
-            BoolDef("farm", label="Render on farm"),
+            EnumDef(
+                "render_target",
+                items=rendering_targets,
+                label="Render target"
+            ),
             BoolDef(
                 "mark_for_review",
                 label="Review",
@@ -129,7 +142,13 @@ class RenderCreator(Creator):
                 "mark_for_review",
                 label="Review",
                 default=False
-            )
+            ),
+            BoolDef(
+                "frames",
+                label="Existing frames",
+                default=False,
+                hidden=True
+            ),
         ]
 
     def get_icon(self):
