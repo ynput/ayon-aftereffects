@@ -6,12 +6,10 @@ import urllib.parse
 
 import pyblish.api
 
-from ayon_core.pipeline import publish
 from ayon_core.pipeline.publish import KnownPublishError
 
 
-class CollectExistingFrames(pyblish.api.InstancePlugin,
-                            publish.ColormanagedPyblishPluginMixin):
+class CollectExistingFrames(pyblish.api.InstancePlugin):
     """Collect existing files rendered via Render in Render Queues.
 
     These files might exist there from test render, triggered manually by
