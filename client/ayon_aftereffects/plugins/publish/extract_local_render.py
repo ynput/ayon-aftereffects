@@ -18,14 +18,14 @@ class ExtractLocalRender(publish.Extractor):
         self.log.debug("staging_dir::{}".format(staging_dir))
 
         # pull file name collected value from Render Queue Output module
-        if not instance.data["file_names"]:
+        if not instance.data["render_queue_file_paths"]:
             raise ValueError("No file extension set in Render Queue")
 
         comp_id = instance.data['comp_id']
         stub.render(staging_dir, comp_id)
 
         representations = []
-        for file_name in instance.data["file_names"]:
+        for file_name in instance.data["render_queue_file_paths"]:
             _, ext = os.path.splitext(os.path.basename(file_name))
             ext = ext[1:]
 

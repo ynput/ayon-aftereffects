@@ -20,7 +20,7 @@ class AERenderInstance(RenderInstance):
     stagingDir = attr.ib(default=None)
     app_version = attr.ib(default=None)
     publish_attributes = attr.ib(default={})
-    file_names = attr.ib(default=[])
+    render_queue_file_paths = attr.ib(default=[])
 
 
 class CollectAERender(publish.AbstractCollectRender):
@@ -126,8 +126,8 @@ class CollectAERender(publish.AbstractCollectRender):
                 fps=fps,
                 app_version=app_version,
                 publish_attributes=inst.data.get("publish_attributes", {}),
-                file_names=[item.file_name for item in render_q],
-
+                # one path per output module, could be multiple
+                render_queue_file_paths=[item.file_name for item in render_q],
                 # The source instance this render instance replaces
                 source_instance=inst
             )
@@ -179,7 +179,7 @@ class CollectAERender(publish.AbstractCollectRender):
 
         base_dir = self._get_output_dir(render_instance)
         expected_files = []
-        for file_name in render_instance.file_names:
+        for file_name in render_instance.render_queue_file_paths:
             _, ext = os.path.splitext(os.path.basename(file_name))
             ext = ext.replace('.', '')
             version_str = "v{:03d}".format(render_instance.version)
