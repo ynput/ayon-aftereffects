@@ -139,4 +139,4 @@ class CollectExistingFrames(pyblish.api.InstancePlugin):
 
         path = os.path.expanduser(path)
 
-        return path
+        return os.path.normpath(path)
