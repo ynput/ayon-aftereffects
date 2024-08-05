@@ -92,12 +92,18 @@ class RenderCreator(Creator):
             data["members"] = [comp.id]
             data["orig_comp_name"] = composition_name
 
+            creator_attributes = {}
+            review = pre_create_data["mark_for_review"]
+            creator_attributes["mark_for_review"] = review
+
+            creator_attributes["render_target"] = (
+                pre_create_data["render_target"])
+
+            data["creator_attributes"] = creator_attributes
+
             new_instance = CreatedInstance(
                 self.product_type, comp_product_name, data, self
             )
-
-            review = pre_create_data["mark_for_review"]
-            new_instance.creator_attributes["mark_for_review"] = review
 
             api.get_stub().imprint(new_instance.id,
                                    new_instance.data_to_store())
