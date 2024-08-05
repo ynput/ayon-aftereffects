@@ -540,7 +540,7 @@ function getRenderInfo(comp_id){
 
             for (j = 1; j<= render_item.numOutputModules; ++j){
                 var item = render_item.outputModule(j);
-                if(original_file_names[j-1] !== 'undefined'){
+                if(original_file_names.length > j-1){
                     item.file = original_file_names[j-1];
                 }
 
