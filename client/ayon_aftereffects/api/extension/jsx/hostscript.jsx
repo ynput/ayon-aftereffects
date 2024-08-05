@@ -505,7 +505,8 @@ function getRenderInfo(comp_id){
     }
 
     var comp_name = item.name;
-    var output_metadata = []
+    var output_metadata = [];
+    var original_file_names = [];
     try{
         // render_item.duplicate() should create new item on renderQueue
         // BUT it works only sometimes, there are some weird synchronization issue
@@ -518,6 +519,10 @@ function getRenderInfo(comp_id){
             }
 
             if (render_item.status == RQItemStatus.DONE){
+                for (j = 1; j<= render_item.numOutputModules; ++j){
+                    var item = render_item.outputModule(j);
+                    original_file_names.push(item.file);
+                }
                 render_item.duplicate();  // create new, cannot change status if DONE
                 render_item.remove();  // remove existing to limit duplications
                 continue;
@@ -532,9 +537,13 @@ function getRenderInfo(comp_id){
                 continue;
             }
             comp_id_count += 1;
-            var item = render_item.outputModule(1);
 
             for (j = 1; j<= render_item.numOutputModules; ++j){
+                var item = render_item.outputModule(j);
+                if(original_file_names[j-1] !== 'undefined'){
+                    item.file = original_file_names[j-1];
+                }
+
                 var file_url = item.file.toString();
                 output_metadata.push(
                     JSON.stringify({
@@ -944,3 +953,4 @@ function _prepareSingleValue(value){
 function _prepareError(error_msg){
     return JSON.stringify({"error": error_msg})
 }
+getRenderInfo(2);
