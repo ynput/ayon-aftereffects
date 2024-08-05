@@ -69,7 +69,7 @@ class CollectExistingFrames(pyblish.api.InstancePlugin):
                 )
 
             folders_by_ext[render_queue_extension] = render_queue_folder
-
+            self.log.debug(f"Searching for files in '{render_queue_folder}'")
             for file_name in os.listdir(render_queue_folder):
                 if not file_name.endswith(render_queue_extension):
                     continue
