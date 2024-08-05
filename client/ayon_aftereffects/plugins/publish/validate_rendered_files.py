@@ -51,10 +51,14 @@ class ValidateRenderedFiles(pyblish.api.InstancePlugin):
 
         missing = expected_files - collected_files
         if missing:
+            checked_folders = {os.path.dirname(file_path)
+                               for file_path in instance.data["expectedFiles"]}
             raise PublishValidationError(
+                "<b>Checked:</b> {}<br/><br/>"
                 "<b>Missing expected files:</b> {}<br/><br/>"
                 "Expected files: {}<br/>"
                 "Existing files: {}".format(
+                    sorted(checked_folders),
                     sorted(missing),
                     sorted(expected_files),
                     sorted(collected_files)
