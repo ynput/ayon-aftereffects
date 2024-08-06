@@ -116,9 +116,9 @@ class ValidateRenderedFiles(pyblish.api.InstancePlugin):
     def repair(cls, instance):
         """Deletes out of sequence files from output dir(s)."""
         collected_files = cls._get_collected_files(instance)
-        checked_folders  = cls._get_checked_folders(instance)
+        checked_folders = cls._get_checked_folders(instance)
 
-        remainders = cls._get_remainders(collected_files)
+        remainders = cls._get_collections_and_remainders(collected_files)
 
         for remainder_file_name in remainders:
             for checked_folder in checked_folders:
