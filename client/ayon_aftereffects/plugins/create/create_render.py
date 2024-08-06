@@ -274,13 +274,11 @@ class RenderCreator(Creator):
         if instance_data["creator_attributes"].get("mark_for_review") is None:
             instance_data["creator_attributes"]["mark_for_review"] = True
 
-        farm = instance_data["creator_attributes"].get("farm")
+        farm = instance_data["creator_attributes"].pop("farm", None)
         if farm is not None:
             if farm:
                 instance_data["creator_attributes"]["render_target"] = "farm"
             else:
                 instance_data["creator_attributes"]["render_target"] = "local"
-
-            instance_data["creator_attributes"].pop("farm")
 
         return instance_data
