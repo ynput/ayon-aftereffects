@@ -3,10 +3,11 @@
 Requires:
 """
 import os.path
+import clique
 
 import pyblish.api
 
-from ayon_core.pipeline import PublishValidationError
+from ayon_core.pipeline.publish import PublishValidationError, RepairAction
 
 
 class ValidateRenderedFiles(pyblish.api.InstancePlugin):
@@ -24,6 +25,7 @@ class ValidateRenderedFiles(pyblish.api.InstancePlugin):
     label = "Validate Rendered Files"
     families = ["render"]
     hosts = ["aftereffects"]
+    actions = [RepairAction]
     optional = True
 
     def process(self, instance):
@@ -39,20 +41,15 @@ class ValidateRenderedFiles(pyblish.api.InstancePlugin):
 
         expected_files = {os.path.basename(file_path)
                           for file_path in instance.data["expectedFiles"]}
-        collected_files = []
-        for repre in instance.data["representations"]:
-            repre_files = repre["files"]
-            if isinstance(repre_files, str):
-                repre_files = [repre_files]
 
-            collected_files.extend(repre_files)
+        collected_files = self._get_collected_files(instance)
 
-        collected_files = set(collected_files)
+        # prepared for multiple outputs per render queue, now it will be only
+        # single folder
+        checked_folders = self._get_checked_folders(instance)
 
         missing = expected_files - collected_files
         if missing:
-            checked_folders = {os.path.dirname(file_path)
-                               for file_path in instance.data["expectedFiles"]}
             raise PublishValidationError(
                 "<b>Checked:</b> {}<br/><br/>"
                 "<b>Missing expected files:</b> {}<br/><br/>"
@@ -66,3 +63,59 @@ class ValidateRenderedFiles(pyblish.api.InstancePlugin):
             )
         else:
             self.log.debug("Matching expected and found files")
+
+        remainders = self._get_remainders(collected_files)
+
+        if remainders:
+            raise PublishValidationError(
+                f"Folders {checked_folders} contain out of sequence files "
+                f"{remainders}. <br/><br/>"
+                f"This will cause issue when integrating.<br/><br/>"
+                "Please remove these files manually or use `Repair` action to "
+                "delete them."
+            )
+
+    @classmethod
+    def _get_checked_folders(cls, instance):
+        """Parses physical output dirs from Render Queue Output Module(s)"""
+        checked_folders = {os.path.dirname(file_path)
+                           for file_path in instance.data["expectedFiles"]}
+        return checked_folders
+
+    @classmethod
+    def _get_remainders(cls, collected_files):
+        """Looks for similarly named files outside of collected sequence.
+
+        Could cause an issue in ExtractReview or Integrate.
+        """
+        _, remainders = clique.assemble(collected_files)
+        return remainders
+
+    @classmethod
+    def _get_collected_files(cls, instance):
+        """Returns all physically found frames for output dir(s)"""
+        collected_files = []
+        for repre in instance.data["representations"]:
+            repre_files = repre["files"]
+            if isinstance(repre_files, str):
+                repre_files = [repre_files]
+
+            collected_files.extend(repre_files)
+        collected_files = set(collected_files)
+        return collected_files
+
+    @classmethod
+    def repair(cls, instance):
+        """Deletes out of sequence files from output dir(s)."""
+        collected_files = cls._get_collected_files(instance)
+        checked_folders  = cls._get_checked_folders(instance)
+
+        remainders = cls._get_remainders(collected_files)
+
+        for remainder_file_name in remainders:
+            for checked_folder in checked_folders:
+                file_path = os.path.join(checked_folder, remainder_file_name)
+                if os.path.exists(file_path):
+                    cls.log.warning(f"Removing {file_path}")
+                    os.remove(file_path)
+                    continue
