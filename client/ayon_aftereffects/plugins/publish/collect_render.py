@@ -6,6 +6,7 @@ import pyblish.api
 
 from ayon_core.pipeline import publish
 from ayon_core.pipeline.publish import RenderInstance
+from ayon_core.pipeline import PublishValidationError
 
 from ayon_aftereffects.api import get_stub
 
@@ -19,7 +20,7 @@ class AERenderInstance(RenderInstance):
     stagingDir = attr.ib(default=None)
     app_version = attr.ib(default=None)
     publish_attributes = attr.ib(default={})
-    file_names = attr.ib(default=[])
+    render_queue_file_paths = attr.ib(default=[])
 
 
 class CollectAERender(publish.AbstractCollectRender):
@@ -89,7 +90,8 @@ class CollectAERender(publish.AbstractCollectRender):
 
             render_q = CollectAERender.get_stub().get_render_info(comp_id)
             if not render_q:
-                raise ValueError("No file extension set in Render Queue")
+                raise PublishValidationError(
+                    "No file extension set in Render Queue")
             render_item = render_q[0]
 
             product_type = "render"
@@ -124,8 +126,8 @@ class CollectAERender(publish.AbstractCollectRender):
                 fps=fps,
                 app_version=app_version,
                 publish_attributes=inst.data.get("publish_attributes", {}),
-                file_names=[item.file_name for item in render_q],
-
+                # one path per output module, could be multiple
+                render_queue_file_paths=[item.file_name for item in render_q],
                 # The source instance this render instance replaces
                 source_instance=inst
             )
@@ -138,13 +140,11 @@ class CollectAERender(publish.AbstractCollectRender):
             instance.comp_name = comp.name
             instance.comp_id = comp_id
 
-            is_local = "renderLocal" in inst.data["family"]  # legacy
-            if inst.data.get("creator_attributes"):
-                is_local = not inst.data["creator_attributes"].get("farm")
-            if is_local:
+            creator_attributes = inst.data["creator_attributes"]
+            if creator_attributes["render_target"] == "local":
                 # for local renders
                 instance = self._update_for_local(instance, project_entity)
-            else:
+            elif creator_attributes["render_target"] == "farm":
                 fam = "render.farm"
                 if fam not in instance.families:
                     instance.families.append(fam)
@@ -177,7 +177,7 @@ class CollectAERender(publish.AbstractCollectRender):
 
         base_dir = self._get_output_dir(render_instance)
         expected_files = []
-        for file_name in render_instance.file_names:
+        for file_name in render_instance.render_queue_file_paths:
             _, ext = os.path.splitext(os.path.basename(file_name))
             ext = ext.replace('.', '')
             version_str = "v{:03d}".format(render_instance.version)

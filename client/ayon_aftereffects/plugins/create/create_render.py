@@ -1,7 +1,7 @@
 import re
 
 from ayon_core import resources
-from ayon_core.lib import BoolDef, UISeparatorDef
+from ayon_core.lib import BoolDef, UISeparatorDef, EnumDef
 from ayon_core.pipeline import (
     Creator,
     CreatedInstance,
@@ -26,6 +26,12 @@ class RenderCreator(Creator):
     description = "Render creator"
 
     create_allow_context_change = True
+
+    rendering_targets = {
+        "local": "Local machine rendering",
+        "farm": "Farm rendering",
+        "frames": "Use existing frames"
+    }
 
     # Settings
     mark_for_review = True
@@ -86,15 +92,18 @@ class RenderCreator(Creator):
             data["members"] = [comp.id]
             data["orig_comp_name"] = composition_name
 
+            creator_attributes = {}
+            review = pre_create_data["mark_for_review"]
+            creator_attributes["mark_for_review"] = review
+
+            creator_attributes["render_target"] = (
+                pre_create_data["render_target"])
+
+            data["creator_attributes"] = creator_attributes
+
             new_instance = CreatedInstance(
                 self.product_type, comp_product_name, data, self
             )
-            if "farm" in pre_create_data:
-                use_farm = pre_create_data["farm"]
-                new_instance.creator_attributes["farm"] = use_farm
-
-            review = pre_create_data["mark_for_review"]
-            new_instance.creator_attributes["mark_for_review"] = review
 
             api.get_stub().imprint(new_instance.id,
                                    new_instance.data_to_store())
@@ -113,7 +122,11 @@ class RenderCreator(Creator):
             BoolDef("use_composition_name",
                     label="Use composition name in product"),
             UISeparatorDef(),
-            BoolDef("farm", label="Render on farm"),
+            EnumDef(
+                "render_target",
+                items=self.rendering_targets,
+                label="Render target"
+            ),
             BoolDef(
                 "mark_for_review",
                 label="Review",
@@ -124,7 +137,11 @@ class RenderCreator(Creator):
 
     def get_instance_attr_defs(self):
         return [
-            BoolDef("farm", label="Render on farm"),
+            EnumDef(
+                "render_target",
+                items=self.rendering_targets,
+                label="Render target"
+            ),
             BoolDef(
                 "mark_for_review",
                 label="Review",
@@ -256,5 +273,12 @@ class RenderCreator(Creator):
 
         if instance_data["creator_attributes"].get("mark_for_review") is None:
             instance_data["creator_attributes"]["mark_for_review"] = True
+
+        farm = instance_data["creator_attributes"].pop("farm", None)
+        if farm is not None:
+            if farm:
+                instance_data["creator_attributes"]["render_target"] = "farm"
+            else:
+                instance_data["creator_attributes"]["render_target"] = "local"
 
         return instance_data
