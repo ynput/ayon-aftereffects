@@ -118,8 +118,7 @@ class ValidateRenderedFiles(pyblish.api.InstancePlugin):
         collected_files = cls._get_collected_files(instance)
         checked_folders = cls._get_checked_folders(instance)
 
-        collections, remainders = (
-            cls._get_collections_and_remainders(collected_files))
+        _, remainders = cls._get_collections_and_remainders(collected_files)
 
         for remainder_file_name in remainders:
             for checked_folder in checked_folders:
