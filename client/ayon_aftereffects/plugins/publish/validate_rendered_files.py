@@ -64,7 +64,8 @@ class ValidateRenderedFiles(pyblish.api.InstancePlugin):
         else:
             self.log.debug("Matching expected and found files")
 
-        remainders = self._get_remainders(collected_files)
+        collections, remainders = (
+            self._get_collections_and_remainders(collected_files))
 
         if remainders:
             raise PublishValidationError(
@@ -75,6 +76,14 @@ class ValidateRenderedFiles(pyblish.api.InstancePlugin):
                 "delete them."
             )
 
+        if len(collections) > 1:
+            raise PublishValidationError(
+                f"Folders {checked_folders} contain multiple collections "
+                f"{collections}. <br/><br/>"
+                f"This will cause issue during extraction of review.<br/><br/>"
+                "Please remove one of the collections manually!"
+            )
+
     @classmethod
     def _get_checked_folders(cls, instance):
         """Parses physical output dirs from Render Queue Output Module(s)"""
@@ -83,13 +92,12 @@ class ValidateRenderedFiles(pyblish.api.InstancePlugin):
         return checked_folders
 
     @classmethod
-    def _get_remainders(cls, collected_files):
+    def _get_collections_and_remainders(cls, collected_files):
         """Looks for similarly named files outside of collected sequence.
 
         Could cause an issue in ExtractReview or Integrate.
         """
-        _, remainders = clique.assemble(collected_files)
-        return remainders
+        return clique.assemble(collected_files)
 
     @classmethod
     def _get_collected_files(cls, instance):
