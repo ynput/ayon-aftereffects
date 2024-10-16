@@ -1,6 +1,5 @@
 import re
 
-from ayon_core import resources
 from ayon_core.lib import BoolDef, UISeparatorDef, EnumDef
 from ayon_core.pipeline import (
     Creator,
@@ -24,6 +23,7 @@ class RenderCreator(Creator):
     label = "Render"
     product_type = "render"
     description = "Render creator"
+    icon = "eye"
 
     create_allow_context_change = True
 
@@ -148,9 +148,6 @@ class RenderCreator(Creator):
                 default=False
             )
         ]
-
-    def get_icon(self):
-        return resources.get_openpype_splash_filepath()
 
     def collect_instances(self):
         for instance_data in cache_and_get_instances(self):
