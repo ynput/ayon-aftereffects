@@ -1,6 +1,5 @@
 import re
 
-from ayon_core import resources
 from ayon_core.lib import BoolDef, UISeparatorDef, EnumDef
 from ayon_core.pipeline import (
     Creator,
