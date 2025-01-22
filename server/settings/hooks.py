@@ -13,9 +13,7 @@ class HooksModel(BaseSettingsModel):
 
 
 DEFAULT_HOOK_VALUES = {
-    "hooks": {
-        "InstallAyonExtensionToAfterEffects": {
-            "enabled": False,
-        }
+    "InstallAyonExtensionToAfterEffects": {
+        "enabled": False,
     }
 }

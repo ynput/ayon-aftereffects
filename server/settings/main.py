@@ -30,8 +30,9 @@ class AfterEffectsSettings(BaseSettingsModel):
         default_factory=TemplatedWorkfileBuildModel,
         title="Templated Workfile Build Settings",
     )
-    hooks: HooksModel = (
-        SettingsField(default_factory=HooksModel, title="Hooks"),
+    hooks: HooksModel = SettingsField(
+        default_factory=HooksModel,
+        title="Hooks",
     )
 
 
