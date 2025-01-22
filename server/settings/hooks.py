@@ -1,11 +1,11 @@
-from ayon_server.settings import BaseSettingsMode, SettingsField
+from ayon_server.settings import BaseSettingsModel, SettingsField
 
 
-class HookOptionalModel(BaseSettingsMode):
+class HookOptionalModel(BaseSettingsModel):
     enabled: bool = SettingsField(False, title="Enabled")
 
 
-class HooksModel(BaseSettingsMode):
+class HooksModel(BaseSettingsModel):
     InstallAyonExtensionToAfterEffects: HookOptionalModel = SettingsField(
         default_factory=HookOptionalModel,
         title="Install AYON Extension",
