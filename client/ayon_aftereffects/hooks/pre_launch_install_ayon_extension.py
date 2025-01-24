@@ -52,7 +52,8 @@ class InstallAyonExtensionToAfterEffect(PreLaunchHook):
 
         extension_path = os.path.join(
             AFTEREFFECTS_ADDON_ROOT,
-            r"api\extension.zxp",
+            "api",
+            "extension.zxp",
         )
 
         # Extension already installed, compare the versions
