@@ -47,7 +47,7 @@ class InstallAyonExtensionToAfterEffect(PreLaunchHook):
             return
 
         target_path = os.path.join(
-            os.environ["appdata"], r"Adobe\CEP\extensions\io.ynput.AE.panel"
+            os.environ["appdata"], "Adobe", "CEP", "extensions", "io.ynput.AE.panel"
         )
 
         extension_path = os.path.join(
