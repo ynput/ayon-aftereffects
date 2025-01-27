@@ -47,7 +47,11 @@ class InstallAyonExtensionToAfterEffect(PreLaunchHook):
             return
 
         target_path = os.path.join(
-            os.environ["appdata"], "Adobe", "CEP", "extensions", "io.ynput.AE.panel"
+            os.environ["appdata"],
+            "Adobe",
+            "CEP",
+            "extensions",
+            "io.ynput.AE.panel",
         )
 
         extension_path = os.path.join(
@@ -67,89 +71,54 @@ class InstallAyonExtensionToAfterEffect(PreLaunchHook):
             ):
                 return
 
-        try:
-            self.log.debug(f"Creating directory: {target_path}")
-            os.makedirs(target_path, exist_ok=True)
+        self.log.debug(f"Creating directory: {target_path}")
+        os.makedirs(target_path, exist_ok=True)
 
-            with ZipFile(extension_path, "r") as archive:
-                archive.extractall(path=target_path)
-            self.log.info("Successfully installed AYON extension")
+        with ZipFile(extension_path, "r") as archive:
+            archive.extractall(path=target_path)
 
-        except OSError as error:
-            self.log.warning(f"OS error has occured: {error}")
-
-        except PermissionError as error:
-            self.log.warning(f"Permissions error has occured: {error}")
-
-        except Exception as error:
-            self.log.warning(f"An unexpected error occured: {error}")
+        self.log.info("Successfully installed AYON extension")
 
     def _compare_extension_versions(
         self, target_path: str, extension_path: str
     ) -> bool:
-        try:
-            # opens the existing extension manifest to get the Version attr
-            with open(f"{target_path}/CSXS/manifest.xml", "rb") as xml_file:
-                installed_version = (
-                    ET.parse(xml_file)
-                    .getroot()
-                    .attrib.get("ExtensionBundleVersion")
-                )
-            self.log.debug(
-                f"Current extension version found: {installed_version}"
+        # opens the existing extension manifest to get the Version attr
+        with open(f"{target_path}/CSXS/manifest.xml", "rb") as xml_file:
+            installed_version = (
+                ET.parse(xml_file)
+                .getroot()
+                .attrib.get("ExtensionBundleVersion")
             )
+        self.log.debug(f"Current extension version found: {installed_version}")
 
-            if not installed_version:
-                self.log.warning(
-                    "Unable to resolve the currently installed extension "
-                    "version. Cancelling.."
-                )
-                return False
-
-            # opens the .zxp manifest to get the Version attribute.
-            with ZipFile(extension_path, "r") as archive:
-                xml_file = archive.open("CSXS/manifest.xml")
-                new_version = (
-                    ET.parse(xml_file)
-                    .getroot()
-                    .attrib.get("ExtensionBundleVersion")
-                )
-                if not new_version:
-                    self.log.warning(
-                        "Unable to resolve the new extension version. "
-                        "Cancelling.."
-                    )
-                self.log.debug(f"New extension version found: {new_version}")
-
-                # compare the two versions, a simple == is enough since
-                # we don't care if the version increments or decrements
-                # if they match nothing happens.
-                if installed_version == new_version:
-                    self.log.info("Versions matched. Cancelling..")
-                    return False
-
-                # remove the existing addon
-                self.log.info(
-                    "Version mismatch found. Removing old extensions.."
-                )
-                rmtree(target_path)
-                return True
-
-        except PermissionError as error:
+        if not installed_version:
             self.log.warning(
-                "Permissions error has occurred while comparing "
-                f"versions: {error}"
+                "Unable to resolve the currently installed extension "
+                "version. Cancelling.."
             )
             return False
 
-        except OSError as error:
+        # opens the .zxp manifest to get the Version attribute.
+        with ZipFile(extension_path, "r") as archive:
+            xml_file = archive.open("CSXS/manifest.xml")
+
+        new_version = (
+            ET.parse(xml_file).getroot().attrib.get("ExtensionBundleVersion")
+        )
+        if not new_version:
             self.log.warning(
-                f"OS error has occured while comparing versions: {error}"
+                "Unable to resolve the new extension version. " "Cancelling.."
             )
+        self.log.debug(f"New extension version found: {new_version}")
+
+        # compare the two versions, a simple == is enough since
+        # we don't care if the version increments or decrements
+        # if they match nothing happens.
+        if installed_version == new_version:
+            self.log.info("Versions matched. Cancelling..")
             return False
 
-        except Exception as error:
-            self.log.warning(
-                f"An unexpected error occured when comparing version: {error}"
-            )
-            return False
+        # remove the existing addon
+        self.log.info("Version mismatch found. Removing old extensions..")
+        rmtree(target_path)
+        return True
