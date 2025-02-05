@@ -26,9 +26,7 @@ class InstallAyonExtensionToAfterEffect(PreLaunchHook):
     def execute(self):
         try:
             settings = self.data["project_settings"]["aftereffects"]
-            if not settings["hooks"]["InstallAyonExtensionToAfterEffects"][
-                "enabled"
-            ]:
+            if not settings["auto_install_extension"]:
                 return
             self.inner_execute()
 

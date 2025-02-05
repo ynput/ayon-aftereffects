@@ -8,11 +8,16 @@ from .publish_plugins import (
 )
 from .workfile_builder import WorkfileBuilderPlugin
 from .templated_workfile_build import TemplatedWorkfileBuildModel
-from .hooks import HooksModel, DEFAULT_HOOK_VALUES
 
 
 class AfterEffectsSettings(BaseSettingsModel):
     """AfterEffects Project Settings."""
+
+    auto_install_extension: bool = SettingsField(
+        False,
+        title="Install AYON Extension",
+        description="Triggers pre-launch hook which installs extension."
+    )
 
     imageio: AfterEffectsImageIOModel = SettingsField(
         default_factory=AfterEffectsImageIOModel, title="OCIO config"
@@ -30,12 +35,10 @@ class AfterEffectsSettings(BaseSettingsModel):
         default_factory=TemplatedWorkfileBuildModel,
         title="Templated Workfile Build Settings",
     )
-    hooks: HooksModel = SettingsField(
-        default_factory=HooksModel, title="Hooks"
-    )
 
 
 DEFAULT_AFTEREFFECTS_SETTING = {
+    "auto_install_extension": False,
     "create": {
         "RenderCreator": {
             "mark_for_review": True,
@@ -48,5 +51,4 @@ DEFAULT_AFTEREFFECTS_SETTING = {
         "custom_templates": [],
     },
     "templated_workfile_build": {"profiles": []},
-    "hooks": DEFAULT_HOOK_VALUES,
 }
