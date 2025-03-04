@@ -24,7 +24,7 @@ class ExtractSaveScene(pyblish.api.InstancePlugin):
             folders=False,
             footages=False
         )
-        if not "data" in representation:
+        if "data" not in representation:
             representation["data"] = {}
         data = {
             "composition_names_in_workfile": [item.name for item in comp_items]
