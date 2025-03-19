@@ -122,7 +122,7 @@ class ValidateSceneSettings(OptionalPyblishPluginMixin,
             "resolutionHeight": instance.data.get("resolutionHeight"),
             "duration": duration
         }
-        self.log.debug("Comp attributes: {}".format(current_settings))
+        self.log.debug(f"Comp attributes: {current_settings}")
 
         invalid_settings = []
         invalid_keys = set()
@@ -132,9 +132,11 @@ class ValidateSceneSettings(OptionalPyblishPluginMixin,
                     key, value, current_settings[key])
 
                 if key == "duration" and expected_settings.get("handleStart"):
-                    msg += "Handles included in calculation. Remove " \
-                           "handles in DB or extend frame range in " \
-                           "Composition Setting."
+                    msg += (
+                        "Handles included in calculation. Remove "
+                        "handles in DB or extend frame range in "
+                        "Composition Setting."
+                    )
 
                 invalid_settings.append(msg)
                 invalid_keys.add(key)
