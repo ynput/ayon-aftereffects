@@ -121,7 +121,7 @@ class AfterEffectsServerStub():
                     str(item.id) == str(item_meta.get('members')[0]):
                 return item_meta
 
-        self.log.debug("Couldn't find layer metadata")
+        self.log.debug(f"Couldn't find layer metadata for item: {item}")
 
     def imprint(self, item_id, data, all_items=None, items_meta=None):
         """
