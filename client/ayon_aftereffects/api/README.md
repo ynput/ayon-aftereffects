@@ -2,11 +2,11 @@
 
 Requirements: This extension requires use of Javascript engine, which is
 available since CC 16.0.
-Please check your File>Project Settings>Expressions>Expressions Engine
+Please check your `File > Project Settings > Expressions > Expressions Engine`
 
 ## Setup
 
-The After Effects integration requires two components to work; `extension` and `server`.
+The After Effects integration requires two components to work: `extension` and `server`.
 
 ### Extension
 
@@ -20,22 +20,11 @@ download [Anastasiy’s Extension Manager](https://install.anastasiy.com/)
 
 `{path to addon}` will be most likely in your AppData (on Windows, in your user data folder in Linux and MacOS.)
 
-### Server
-
-The easiest way to get the server and After Effects launch is with:
-
-```
-python -c ^"import ayon_core.hosts.photoshop;ayon_aftereffects.launch(""c:\Program Files\Adobe\Adobe After Effects 2020\Support Files\AfterFX.exe"")^"
-```
-
-`avalon.aftereffects.launch` launches the application and server, and also closes the server when After Effects exists.
-
 ## Usage
 
 The After Effects extension can be found under `Window > Extensions > AYON`. Once launched you should be presented with a panel like this:
 
 ![Ayon Panel](panel.png "Ayon Panel")
-
 
 ## Developing
 
@@ -51,17 +40,17 @@ ZXPSignCmd -sign {path to addon}/api/extension {path to addon}/api/extension.zxp
 
 ### Plugin Examples
 
-These plugins were made with the [polly config](https://github.com/mindbender-studio/config). To fully integrate and load, you will have to use this config and add `image` to the [integration plugin](https://github.com/mindbender-studio/config/blob/master/polly/plugins/publish/integrate_asset.py).
-
 Expected deployed extension location on default Windows:
-`c:\Program Files (x86)\Common Files\Adobe\CEP\extensions\io.ynput.AE.panel`
+`C:\Program Files (x86)\Common Files\Adobe\CEP\extensions\io.ynput.AE.panel`
 
 For easier debugging of Javascript:
 https://community.adobe.com/t5/download-install/adobe-extension-debuger-problem/td-p/10911704?page=1
-Add (optional) --enable-blink-features=ShadowDOMV0,CustomElementsV0 when starting Chrome
-then localhost:8092
+
+1. Add (optional) `--enable-blink-features=ShadowDOMV0,CustomElementsV0` when starting Chrome
+2. Then go to `localhost:8092`
 
 Or use Visual Studio Code https://medium.com/adobetech/extendscript-debugger-for-visual-studio-code-public-release-a2ff6161fa01
+
 ## Resources
   - https://javascript-tools-guide.readthedocs.io/introduction/index.html
   - https://github.com/Adobe-CEP/Getting-Started-guides

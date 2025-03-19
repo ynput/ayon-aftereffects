@@ -63,7 +63,7 @@ class AfterEffectsHost(HostBase, IWorkfileHost, ILoadHost, IPublishHost):
         return self._stub
 
     def install(self):
-        print("Installing Pype config...")
+        print("Installing AYON After Effects integration...")
 
         pyblish.api.register_host("aftereffects")
         pyblish.api.register_plugin_path(PUBLISH_PATH)
@@ -255,7 +255,7 @@ def containerise(name,
         container (str): Name of container assembly
     """
     data = {
-        "schema": "openpype:container-2.0",
+        "schema": "ayon:container-3.0",
         "id": AVALON_CONTAINER_ID,
         "name": name,
         "namespace": namespace,
@@ -279,7 +279,7 @@ def cache_and_get_instances(creator):
     Returns:
         List[]: list of all instances stored in metadata
     """
-    shared_key = "openpype.photoshop.instances"
+    shared_key = "ayon.aftereffects.instances"
     if shared_key not in creator.collection_shared_data:
         creator.collection_shared_data[shared_key] = \
             creator.host.list_instances()
