@@ -120,7 +120,7 @@ class AfterEffectsHost(HostBase, IWorkfileHost, ILoadHost, IPublishHost):
 
         Pulls from File > File Info
 
-        For SubsetManager
+        For Scene Inventory (Manage...)
 
         Returns:
             (list) of dictionaries matching instances format
@@ -145,10 +145,10 @@ class AfterEffectsHost(HostBase, IWorkfileHost, ILoadHost, IPublishHost):
         Updates metadata of current file in File > File Info and removes
         icon highlight on group layer.
 
-        For SubsetManager
+        For Scene Inventory
 
         Args:
-            instance (dict): instance representation from subsetmanager model
+            instance (dict): instance representation from Scene Inventory model
         """
         stub = self.stub
 
