@@ -7,8 +7,6 @@ import logging
 import pyblish
 from typing import Union
 
-import ayon_api
-
 from ayon_core.pipeline.context_tools import get_current_task_entity
 
 from .ws_stub import get_stub
