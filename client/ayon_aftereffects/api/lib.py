@@ -1,13 +1,15 @@
+from __future__ import annotations
 import os
 import re
 import json
 import contextlib
 import logging
 import pyblish
+from typing import Union
 
 import ayon_api
 
-from ayon_core.pipeline.context_tools import get_current_context
+from ayon_core.pipeline.context_tools import get_current_task_entity
 
 from .ws_stub import get_stub
 
@@ -88,21 +90,21 @@ def get_background_layers(file_url):
     return layers
 
 
-def get_folder_settings(folder_entity):
-    """Get settings of current folder.
+def get_entity_attributes(entity: dict) -> dict[str, Union[float, int]]:
+    """Get attributes of folder or task entity.
 
     Returns:
         dict: Scene data.
 
     """
-    folder_attributes = folder_entity["attrib"]
-    fps = folder_attributes.get("fps", 0)
-    frame_start = folder_attributes.get("frameStart", 0)
-    frame_end = folder_attributes.get("frameEnd", 0)
-    handle_start = folder_attributes.get("handleStart", 0)
-    handle_end = folder_attributes.get("handleEnd", 0)
-    resolution_width = folder_attributes.get("resolutionWidth", 0)
-    resolution_height = folder_attributes.get("resolutionHeight", 0)
+    attrib: dict = entity["attrib"]
+    fps = attrib.get("fps", 0)
+    frame_start = attrib.get("frameStart", 0)
+    frame_end = attrib.get("frameEnd", 0)
+    handle_start = attrib.get("handleStart", 0)
+    handle_end = attrib.get("handleEnd", 0)
+    resolution_width = attrib.get("resolutionWidth", 0)
+    resolution_height = attrib.get("resolutionHeight", 0)
     duration = (frame_end - frame_start + 1) + handle_start + handle_end
 
     return {
@@ -117,24 +119,25 @@ def get_folder_settings(folder_entity):
     }
 
 
-def set_settings(frames, resolution, comp_ids=None, print_msg=True):
+def set_settings(
+        frames, resolution, comp_ids=None, print_msg=True, entity=None):
     """Sets number of frames and resolution to selected comps.
 
     Args:
         frames (bool): True if set frame info
         resolution (bool): True if set resolution
-        comp_ids (list): specific composition ids, if empty
+        comp_ids (list[int]): specific composition ids, if empty
             it tries to look for currently selected
         print_msg (bool): True throw JS alert with msg
+        entity (Optional[dict]): Entity to use attributes from to define the
+            frame range, fps and resolution from. If not provided, current
+            task entity is used.
     """
     frame_start = frames_duration = fps = width = height = None
-    current_context = get_current_context()
 
-    folder_entity = ayon_api.get_folder_by_path(
-        current_context["project_name"],
-        current_context["folder_path"]
-    )
-    settings = get_folder_settings(folder_entity)
+    if entity is None:
+        entity = get_current_task_entity()
+    settings = get_entity_attributes(entity)
 
     msg = ''
     if frames:

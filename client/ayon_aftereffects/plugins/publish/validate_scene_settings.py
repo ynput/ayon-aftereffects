@@ -13,29 +13,24 @@ from ayon_core.pipeline import (
     PublishXmlValidationError,
     OptionalPyblishPluginMixin
 )
-from ayon_aftereffects.api import get_folder_settings
+from ayon_aftereffects.api import get_entity_attributes
 
 
 class ValidateSceneSettings(OptionalPyblishPluginMixin,
                             pyblish.api.InstancePlugin):
-    """
-        Ensures that Composition Settings (right mouse on comp) are same as
-        in FTrack on task.
+    """Ensures that Composition Settings (right mouse on comp) are same as
+    task or folder attributes in AYON.
 
-        By default checks only duration - how many frames should be rendered.
-        Compares:
-            Frame start - Frame end + 1 from FTrack
-                against
-            Duration in Composition Settings.
+    By default checks only duration - how many frames should be rendered.
+    Compares:
+        Frame start - Frame end + 1 against duration in Composition Settings.
 
-        If this complains:
-            Check error message where is discrepancy.
-            Check FTrack task 'pype' section of task attributes for expected
-            values.
-            Check/modify rendered Composition Settings.
+    If this complains:
+        Check error message where is discrepancy.
+        Check/modify rendered Composition Settings.
 
-        If you know what you are doing run publishing again, uncheck this
-        validation before Validation phase.
+    If you know what you are doing run publishing again, uncheck this
+    validation before Validation phase.
     """
 
     """
@@ -67,23 +62,31 @@ class ValidateSceneSettings(OptionalPyblishPluginMixin,
     skip_resolution_check = [".*"]
 
     def process(self, instance):
-        """Plugin entry point."""
         # Skip the instance if is not active by data on the instance
         if not self.is_active(instance.data):
             return
 
-        folder_entity = instance.data["folderEntity"]
-        expected_settings = get_folder_settings(folder_entity)
-        self.log.info("config from DB::{}".format(expected_settings))
+        entity: dict = (
+            instance.data.get("taskEntity")
+            or instance.data["folderEntity"]
+        )
+        expected_settings = get_entity_attributes(entity)
+        self.log.debug(f"Found entity attributes: {expected_settings}")
 
-        task_name = instance.data["task"]
+        task_name: str = instance.data["task"]
         if any(re.search(pattern, task_name)
                 for pattern in self.skip_resolution_check):
+            self.log.debug(
+                f"Skipping resolution check for task name: {task_name}"
+            )
             expected_settings.pop("resolutionWidth")
             expected_settings.pop("resolutionHeight")
 
         if any(re.search(pattern, task_name)
                 for pattern in self.skip_timelines_check):
+            self.log.debug(
+                f"Skipping frames check for task name: {task_name}"
+            )
             expected_settings.pop('fps', None)
             expected_settings.pop('frameStart', None)
             expected_settings.pop('frameEnd', None)
@@ -99,10 +102,13 @@ class ValidateSceneSettings(OptionalPyblishPluginMixin,
                     "{:.2f}".format(fps))
             expected_settings["fps"] = fps
 
-        duration = instance.data.get("frameEndHandle") - \
-            instance.data.get("frameStartHandle") + 1
+        duration = (
+            instance.data.get("frameEndHandle")
+            - instance.data.get("frameStartHandle")
+            + 1
+        )
 
-        self.log.debug("validated items::{}".format(expected_settings))
+        self.log.debug(f"Validating attributes: {expected_settings}")
 
         current_settings = {
             "fps": fps,
@@ -116,7 +122,7 @@ class ValidateSceneSettings(OptionalPyblishPluginMixin,
             "resolutionHeight": instance.data.get("resolutionHeight"),
             "duration": duration
         }
-        self.log.info("current_settings:: {}".format(current_settings))
+        self.log.debug("Comp attributes: {}".format(current_settings))
 
         invalid_settings = []
         invalid_keys = set()
