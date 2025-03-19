@@ -1,5 +1,7 @@
+from __future__ import annotations
 import os
 import tempfile
+from typing import Any
 
 import attr
 import pyblish.api
@@ -13,14 +15,14 @@ from ayon_aftereffects.api import get_stub
 @attr.s
 class AERenderInstance(RenderInstance):
     # extend generic, composition name is needed
-    comp_name = attr.ib(default=None)
-    comp_id = attr.ib(default=None)
-    fps = attr.ib(default=None)
-    projectEntity = attr.ib(default=None)
-    stagingDir = attr.ib(default=None)
-    app_version = attr.ib(default=None)
-    publish_attributes = attr.ib(default={})
-    render_queue_file_paths = attr.ib(default=[])
+    comp_name: str = attr.ib(default=None)
+    comp_id: int = attr.ib(default=None)
+    fps: float = attr.ib(default=None)
+    projectEntity: dict = attr.ib(default=None)
+    stagingDir: str = attr.ib(default=None)
+    app_version: str = attr.ib(default=None)
+    publish_attributes: dict[str, Any] = attr.ib(default={})
+    render_queue_file_paths: list[str] = attr.ib(default=[])
 
 
 class CollectAERender(publish.AbstractCollectRender):
@@ -48,7 +50,9 @@ class CollectAERender(publish.AbstractCollectRender):
             cls._stub = get_stub()
         return cls._stub
 
-    def get_instances(self, context):
+    def get_instances(
+        self, context: pyblish.api.Context
+    ) -> list[AERenderInstance]:
         instances = []
 
         app_version = CollectAERender.get_stub().get_app_version()
@@ -165,7 +169,7 @@ class CollectAERender(publish.AbstractCollectRender):
             for later 'submit_publish_job'.
 
         Args:
-            render_instance (RenderInstance): to pull anatomy and parts used
+            render_instance (AERenderInstance): to pull anatomy and parts used
                 in url
 
         Returns:
@@ -202,13 +206,12 @@ class CollectAERender(publish.AbstractCollectRender):
         return expected_files
 
     def _get_output_dir(self, render_instance):
-        """
-            Returns dir path of rendered files, used in submit_publish_job
-            for metadata.json location.
-            Should be in separate folder inside of work area.
+        """Return dir path of rendered files, used in submit_publish_job
+        for metadata.json location. Should be in separate folder inside work
+        area.
 
         Args:
-            render_instance (RenderInstance):
+            render_instance (AERenderInstance): The render instance.
 
         Returns:
             (str): absolute path to rendered files
