@@ -84,11 +84,6 @@ class RenderCreator(Creator):
                     flags=re.IGNORECASE
                 )
 
-            for inst in self.create_context.instances:
-                if comp_product_name == inst.product_name:
-                    raise CreatorError("{} already exists".format(
-                        inst.product_name))
-
             data["members"] = [comp.id]
             data["orig_comp_name"] = composition_name
 
