@@ -65,7 +65,7 @@ class CollectExistingFrames(pyblish.api.InstancePlugin):
                 raise KnownPublishError(
                     "Multiple render queues detected "
                     "with same extension. \n"
-                    "Please change one the extensions!"
+                    "Please change one of the extensions!"
                 )
 
             folders_by_ext[render_queue_extension] = render_queue_folder
