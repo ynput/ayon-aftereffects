@@ -37,7 +37,7 @@ class ValidateFootageItems(pyblish.api.InstancePlugin):
         comp_id = instance.data["comp_id"]
         for footage_item in get_stub().get_items(comps=False, folders=False,
                                                  footages=True):
-            self.log.info(footage_item)
+            self.log.debug(f"Validating footage item: {footage_item}")
             if comp_id not in footage_item.containing_comps:
                 continue
 
