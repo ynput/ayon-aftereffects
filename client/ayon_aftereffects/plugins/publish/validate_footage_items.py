@@ -35,9 +35,8 @@ class ValidateFootageItems(pyblish.api.InstancePlugin):
         """Plugin entry point."""
 
         comp_id = instance.data["comp_id"]
-        for footage_item in get_stub().get_items(comps=False, folders=False,
-                                                 footages=True):
-            self.log.debug(f"Validating footage item: {footage_item}")
+        for footage_item in get_stub().get_items(
+                comps=False, folders=False, footages=True):
             if comp_id not in footage_item.containing_comps:
                 continue
 
@@ -45,5 +44,5 @@ class ValidateFootageItems(pyblish.api.InstancePlugin):
             if path and not os.path.exists(path):
                 msg = f"File {path} not found."
                 formatting = {"name": footage_item.name, "path": path}
-                raise PublishXmlValidationError(self, msg,
-                                                formatting_data=formatting)
+                raise PublishXmlValidationError(
+                    self, msg, formatting_data=formatting)
