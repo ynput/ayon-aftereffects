@@ -43,6 +43,8 @@ DEFAULT_AFTEREFFECTS_SETTING = {
         "RenderCreator": {
             "mark_for_review": True,
             "default_variants": ["Main"],
+            "force_setting_values": True,
+            "rename_comp_to_product_name": True,
         }
     },
     "publish": AE_PUBLISH_PLUGINS_DEFAULTS,

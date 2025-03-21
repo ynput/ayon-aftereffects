@@ -47,6 +47,12 @@ def main(*subprocess_args):
     launcher = ProcessLauncher(subprocess_args)
     launcher.start()
 
+    workfiles_on_launch = os.getenv(
+        "AYON_AFTEREFFECTS_WORKFILES_ON_LAUNCH",
+        # Backwards compatibility
+        os.getenv("AVALON_AFTEREFFECTS_WORKFILES_ON_LAUNCH", True)
+    )
+
     if is_in_tests():
         manager = AddonsManager()
         aftereffects_addon = manager["aftereffects"]
@@ -59,7 +65,7 @@ def main(*subprocess_args):
             )
         )
 
-    elif os.environ.get("AVALON_AFTEREFFECTS_WORKFILES_ON_LAUNCH", True):
+    elif workfiles_on_launch:
         save = False
         if os.getenv("WORKFILES_SAVE_AS"):
             save = True

@@ -36,6 +36,7 @@ class RenderCreator(Creator):
     # Settings
     mark_for_review = True
     force_setting_values = True
+    rename_comp_to_product_name = True
 
     def create(self, product_name, data, pre_create_data):
         stub = api.get_stub()  # only after After Effects is up
@@ -62,6 +63,13 @@ class RenderCreator(Creator):
             )
         use_composition_name = (pre_create_data.get("use_composition_name") or
                                 len(comps) > 1)
+
+        # Transfer certain attributes to creator attributes
+        creator_attributes = {
+            "render_target": pre_create_data["render_target"],
+            "mark_for_review": pre_create_data["mark_for_review"]
+        }
+
         for comp in comps:
             composition_name = re.sub(
                 "[^{}]+".format(PRODUCT_NAME_ALLOWED_SYMBOLS),
@@ -84,22 +92,10 @@ class RenderCreator(Creator):
                     flags=re.IGNORECASE
                 )
 
-            for inst in self.create_context.instances:
-                if comp_product_name == inst.product_name:
-                    raise CreatorError("{} already exists".format(
-                        inst.product_name))
-
             data["members"] = [comp.id]
-            data["orig_comp_name"] = composition_name
-
-            creator_attributes = {}
-            review = pre_create_data["mark_for_review"]
-            creator_attributes["mark_for_review"] = review
-
-            creator_attributes["render_target"] = (
-                pre_create_data["render_target"])
-
             data["creator_attributes"] = creator_attributes
+            if self.rename_comp_to_product_name:
+                data["orig_comp_name"] = composition_name
 
             new_instance = CreatedInstance(
                 self.product_type, comp_product_name, data, self
@@ -109,7 +105,8 @@ class RenderCreator(Creator):
                                    new_instance.data_to_store())
             self._add_instance_to_context(new_instance)
 
-            stub.rename_item(comp.id, comp_product_name)
+            if self.rename_comp_to_product_name:
+                stub.rename_item(comp.id, comp_product_name)
             if self.force_setting_values:
                 # Force fps, frame range and resolution of comp to match
                 # the target publish context attributes.
@@ -188,7 +185,7 @@ class RenderCreator(Creator):
             api.get_stub().imprint(created_inst.get("instance_id"),
                                    created_inst.data_to_store())
             name_change = _changes.get("productName")
-            if name_change:
+            if self.rename_comp_to_product_name and name_change:
                 api.get_stub().rename_item(created_inst.data["members"][0],
                                            name_change.new_value)
 
@@ -198,16 +195,17 @@ class RenderCreator(Creator):
             self._remove_instance_from_context(instance)
             self.host.remove_instance(instance)
 
-            comp_id = instance.data["members"][0]
-            comp = api.get_stub().get_item(comp_id)
-            orig_comp_name = instance.data.get("orig_comp_name")
-            if comp:
-                if orig_comp_name:
-                    new_comp_name = orig_comp_name
-                else:
-                    new_comp_name = "dummyCompName"
-                api.get_stub().rename_item(comp_id,
-                                           new_comp_name)
+            if self.rename_comp_to_product_name:
+                comp_id = instance.data["members"][0]
+                comp = api.get_stub().get_item(comp_id)
+                orig_comp_name = instance.data.get("orig_comp_name")
+                if comp:
+                    if orig_comp_name:
+                        new_comp_name = orig_comp_name
+                    else:
+                        new_comp_name = "dummyCompName"
+                    api.get_stub().rename_item(comp_id,
+                                               new_comp_name)
 
     def apply_settings(self, project_settings):
         plugin_settings = (
@@ -218,6 +216,9 @@ class RenderCreator(Creator):
         self.default_variants = plugin_settings.get(
             "default_variants",
             plugin_settings.get("defaults") or []
+        )
+        self.rename_comp_to_product_name = plugin_settings.get(
+            "rename_comp_to_product_name", self.rename_comp_to_product_name
         )
 
     def get_detail_description(self):
