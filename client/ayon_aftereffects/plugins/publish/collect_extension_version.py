@@ -9,15 +9,15 @@ from ayon_aftereffects.api import (
 
 
 class CollectExtensionVersion(pyblish.api.ContextPlugin):
-    """ Pulls and compares version of installed extension.
+    """Pulls and compares version of installed extension.
 
-        It is recommended to use same extension as in provided Openpype code.
+    It is recommended to use same extension as in provided AYON code.
 
-        Please use Anastasiy’s Extension Manager or ZXPInstaller to update
-        extension in case of an error.
+    Please use Anastasiy’s Extension Manager or ZXPInstaller to update
+    extension in case of an error.
 
-        You can locate extension.zxp in your installed Openpype code in
-        `repos/avalon-core/avalon/aftereffects`
+    You can locate extension.zxp in your installed AYON After Effects code
+    in `repos/ayon-aftereffects/api/extension.zxp`.
     """
     # This technically should be a validator, but other collectors might be
     # impacted with usage of obsolete extension, so collector that runs first

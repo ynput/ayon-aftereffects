@@ -9,6 +9,14 @@ class CreateRenderPlugin(BaseSettingsModel):
     )
     force_setting_values: bool = SettingsField(
         True, title="Force resolution and duration values from Folder")
+    rename_comp_to_product_name: bool = SettingsField(
+        True,
+        title="Rename composition to product name",
+        description=(
+            "Rename composition to product name when creating render instance "
+            "or when updating product name, e.g. on variant change."
+        )
+    )
 
 
 class AfterEffectsCreatorPlugins(BaseSettingsModel):
