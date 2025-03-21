@@ -30,8 +30,7 @@ class ValidateSceneSettings(OptionalPyblishPluginMixin,
 
         If this complains:
             Check error message where is discrepancy.
-            Check FTrack task 'pype' section of task attributes for expected
-            values.
+            Check AYON section of task attributes for expected values.
             Check/modify rendered Composition Settings.
 
         If you know what you are doing run publishing again, uncheck this

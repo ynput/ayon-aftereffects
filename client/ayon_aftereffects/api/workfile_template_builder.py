@@ -15,7 +15,7 @@ from ayon_core.pipeline.workfile.workfile_template_builder import (
 from ayon_aftereffects.api import get_stub
 
 PLACEHOLDER_SET = "PLACEHOLDERS_SET"
-PLACEHOLDER_ID = "openpype.placeholder"
+PLACEHOLDER_ID = "ayon.placeholder"
 
 
 class AETemplateBuilder(AbstractTemplateBuilder):
@@ -115,7 +115,7 @@ class AEPlaceholderPlugin(PlaceholderPlugin):
         if not item_id:
             raise ValueError("Couldn't create a placeholder")
         container_data = {
-            "id": "openpype.placeholder",
+            "id": PLACEHOLDER_ID,
             "name": name,
             "is_placeholder": True,
             "plugin_identifier": self.identifier,
