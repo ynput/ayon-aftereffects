@@ -8,7 +8,7 @@ from ayon_aftereffects.api.lib import get_unique_layer_name
 class FileLoader(api.AfterEffectsLoader):
     """Load images
 
-    Stores the imported asset in a container named after the asset.
+    Stores the imported product version in a container named after the folder.
     """
     label = "Load file"
 
@@ -72,7 +72,6 @@ class FileLoader(api.AfterEffectsLoader):
         )
 
     def update(self, container, context):
-        """ Switch asset or change version """
         stub = self.get_stub()
         layer = container.pop("layer")
 
@@ -83,7 +82,7 @@ class FileLoader(api.AfterEffectsLoader):
         namespace_from_container = re.sub(r'_\d{3}$', '',
                                           container["namespace"])
         layer_name = "{}_{}".format(folder_name, product_name)
-        # switching assets
+        #
         if namespace_from_container != layer_name:
             layers = stub.get_items(comps=True)
             existing_layers = [layer.name for layer in layers]

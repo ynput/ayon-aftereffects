@@ -57,7 +57,6 @@ class BackgroundLoader(api.AfterEffectsLoader):
         )
 
     def update(self, container, context):
-        """ Switch asset or change version """
         stub = self.get_stub()
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
