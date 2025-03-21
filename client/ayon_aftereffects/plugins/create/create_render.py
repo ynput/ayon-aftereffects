@@ -108,7 +108,24 @@ class RenderCreator(Creator):
             if self.rename_comp_to_product_name:
                 stub.rename_item(comp.id, comp_product_name)
             if self.force_setting_values:
-                set_settings(True, True, [comp.id], print_msg=False)
+                # Force fps, frame range and resolution of comp to match
+                # the target publish context attributes.
+                # Task is not required for an instance, so it may be not set
+                if data.get("task"):
+                    entity = self.create_context.get_task_entity(
+                        folder_path=data["folderPath"],
+                        task_name=data["task"]
+                    )
+                else:
+                    entity = self.create_context.get_folder_entity(
+                        folder_path=data["folderPath"]
+                    )
+                set_settings(
+                    frames=True,
+                    resolution=True,
+                    comp_ids=[comp.id],
+                    print_msg=False,
+                    entity=entity)
 
     def get_pre_create_attr_defs(self):
         output = [

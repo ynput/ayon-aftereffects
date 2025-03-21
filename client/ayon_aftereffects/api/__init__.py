@@ -17,7 +17,7 @@ from .pipeline import (
 from .lib import (
     maintained_selection,
     get_extension_manifest_path,
-    get_folder_settings,
+    get_entity_attributes,
     set_settings
 )
 
@@ -38,7 +38,7 @@ __all__ = [
     # lib
     "maintained_selection",
     "get_extension_manifest_path",
-    "get_folder_settings",
+    "get_entity_attributes",
     "set_settings",
 
     # plugin
