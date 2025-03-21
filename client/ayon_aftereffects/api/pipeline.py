@@ -9,7 +9,7 @@ from ayon_core.pipeline import (
     register_loader_plugin_path,
     register_creator_plugin_path,
     register_workfile_build_plugin_path,
-    AVALON_CONTAINER_ID,
+    AYON_CONTAINER_ID,
     AVALON_INSTANCE_ID,
     AYON_INSTANCE_ID,
 )
@@ -63,7 +63,7 @@ class AfterEffectsHost(HostBase, IWorkfileHost, ILoadHost, IPublishHost):
         return self._stub
 
     def install(self):
-        print("Installing Pype config...")
+        print("Installing AYON After Effects integration...")
 
         pyblish.api.register_host("aftereffects")
         pyblish.api.register_plugin_path(PUBLISH_PATH)
@@ -120,7 +120,7 @@ class AfterEffectsHost(HostBase, IWorkfileHost, ILoadHost, IPublishHost):
 
         Pulls from File > File Info
 
-        For SubsetManager
+        For Scene Inventory (Manage...)
 
         Returns:
             (list) of dictionaries matching instances format
@@ -145,10 +145,10 @@ class AfterEffectsHost(HostBase, IWorkfileHost, ILoadHost, IPublishHost):
         Updates metadata of current file in File > File Info and removes
         icon highlight on group layer.
 
-        For SubsetManager
+        For Scene Inventory
 
         Args:
-            instance (dict): instance representation from subsetmanager model
+            instance (dict): instance representation from Scene Inventory model
         """
         stub = self.stub
 
@@ -255,8 +255,8 @@ def containerise(name,
         container (str): Name of container assembly
     """
     data = {
-        "schema": "openpype:container-2.0",
-        "id": AVALON_CONTAINER_ID,
+        "schema": "ayon:container-3.0",
+        "id": AYON_CONTAINER_ID,
         "name": name,
         "namespace": namespace,
         "loader": str(loader),
@@ -279,7 +279,7 @@ def cache_and_get_instances(creator):
     Returns:
         List[]: list of all instances stored in metadata
     """
-    shared_key = "openpype.photoshop.instances"
+    shared_key = "ayon.aftereffects.instances"
     if shared_key not in creator.collection_shared_data:
         creator.collection_shared_data[shared_key] = \
             creator.host.list_instances()

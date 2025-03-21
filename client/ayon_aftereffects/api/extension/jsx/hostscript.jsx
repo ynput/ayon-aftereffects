@@ -429,7 +429,7 @@ function getCompProperties(comp_id){
 function setCompProperties(comp_id, frameStart, framesCount, frameRate,
                            width, height){
     /**
-     * Sets work area info from outside (from Ftrack via OpenPype)
+     * Sets work area info from outside (usually from AYON entity attributes)
      */
     var comp = app.project.itemByID(comp_id);
     if (!comp){
