@@ -28,7 +28,7 @@ class TemplatedWorkfileProfileModel(BaseSettingsModel):
 
 
 class TemplatedWorkfileBuildModel(BaseSettingsModel):
-    """More complex workfile template builder with Placeholders"""
+    """Workfile template builder with dynamic items via Placeholders"""
     profiles: list[TemplatedWorkfileProfileModel] = SettingsField(
         default_factory=list
     )

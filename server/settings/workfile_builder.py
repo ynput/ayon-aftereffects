@@ -16,12 +16,13 @@ class CustomBuilderTemplate(BaseSettingsModel):
 
 
 class WorkfileBuilderPlugin(BaseSettingsModel):
-    """Legacy use of simple workfile template based on Task type"""
+    """Simpler workfile template based on Task type"""
     _title = "Workfile Builder"
     create_first_version: bool = SettingsField(
         False,
         title="Create first workfile",
-        description="Must be enabled to copy template and create first workfile"
+        description="Save first workfile with the built template on "
+                    "first run if no existing workfile exists."
     )
 
     custom_templates: list[CustomBuilderTemplate] = SettingsField(
