@@ -220,6 +220,9 @@ class RenderCreator(Creator):
         self.rename_comp_to_product_name = plugin_settings.get(
             "rename_comp_to_product_name", self.rename_comp_to_product_name
         )
+        self.force_setting_values = plugin_settings.get(
+            "force_setting_values", self.force_setting_values
+        )
 
     def get_detail_description(self):
         return """Creator for Render instances
