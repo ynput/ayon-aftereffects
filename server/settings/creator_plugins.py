@@ -8,7 +8,7 @@ class CreateRenderPlugin(BaseSettingsModel):
         title="Default Variants"
     )
     force_setting_values: bool = SettingsField(
-        True, title="Force resolution and duration values from Folder")
+        True, title="Force resolution and duration values from Task")
     rename_comp_to_product_name: bool = SettingsField(
         True,
         title="Rename composition to product name",
