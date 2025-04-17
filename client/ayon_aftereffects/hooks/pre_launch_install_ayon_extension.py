@@ -69,11 +69,11 @@ class InstallAyonExtensionToAfterEffect(PreLaunchHook):
                 archive.extractall(path=target_path)
             self.log.info("Successfully installed AYON extension")
 
-        except OSError as error:
-            self.log.warning(f"OS error has occurred: {error}")
-
         except PermissionError as error:
             self.log.warning(f"Permissions error has occurred: {error}")
+
+        except OSError as error:
+            self.log.warning(f"OS error has occurred: {error}")
 
         except Exception as error:
             self.log.warning(f"An unexpected error occurred: {error}")
