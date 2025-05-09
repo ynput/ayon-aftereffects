@@ -22,6 +22,9 @@ from ayon_core.tools.utils import host_tools, get_ayon_qt_app
 from .webserver import WebServerTool
 from .ws_stub import get_stub
 from .lib import set_settings
+# ========================== R42 Custom ======================================
+from .lib import save_copy
+# ========================== R42 Custom ======================================
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -323,6 +326,11 @@ class AfterEffectsRoute(WebSocketRoute):
     async def publish_route(self):
         self._tool_route("publisher")
 
+    # ========================== R42 Custom ======================================
+    async def savecopy_route(self):
+        self._savecopy_route()
+    # ========================== R42 Custom ======================================
+
     async def sceneinventory_route(self):
         self._tool_route("sceneinventory")
 
@@ -358,6 +366,15 @@ class AfterEffectsRoute(WebSocketRoute):
 
         # Required return statement.
         return "nothing"
+
+    # ========================== R42 Custom ======================================
+    def _savecopy_route(self):
+        partial_method = functools.partial(save_copy)
+        ProcessLauncher.execute_in_main_thread(partial_method)
+
+        # Required return statement.
+        return "nothing"
+    # ========================== R42 Custom ======================================
 
     def create_placeholder_route(self):
         from ayon_aftereffects.api.workfile_template_builder import \
