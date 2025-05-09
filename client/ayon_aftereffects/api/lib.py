@@ -11,6 +11,11 @@ from ayon_core.pipeline.context_tools import get_current_task_entity
 
 from .ws_stub import get_stub
 
+# ========================== R42 Custom ======================================
+from . import r42_lib
+import shutil
+# ========================== R42 Custom ======================================
+
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
@@ -165,6 +170,28 @@ def set_settings(
         if print_msg:
             stub.print_msg(msg)
 
+# ========================== R42 Custom ======================================
+def save_copy():
+    """ Saves a copy of the current workfile and publish it. Continue working on current workfile
+
+    """
+    session_data = r42_lib.generate_session_data()
+    stub = get_stub()
+
+    current_workfile_path = stub.get_current_path()
+    increment_workfile_path = r42_lib.increment_workfile_path()
+
+    # Save a copy (Have to do it manually since AE API doesn't have save a copy)
+    stub.save()
+    shutil.copy2(current_workfile_path, increment_workfile_path)
+    stub.print_msg(f"Saved a copy")
+
+    # Register that copy to the database
+    r42_lib.r42_publish_workfile(increment_workfile_path)
+    stub.print_msg(f"Registered in database. Done")
+
+
+# ========================== R42 Custom ======================================
 
 def find_close_plugin(close_plugin_name, log):
     if close_plugin_name:

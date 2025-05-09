@@ -647,6 +647,14 @@ class AfterEffectsServerStub():
                                   ('AfterEffects.print_msg',
                                    msg=msg))
 
+    # ========================== R42 Custom ======================================
+    def get_current_path(self):
+        """Grab the path of current project."""
+        res = self.websocketserver.call(self.client.call
+                                        ("AfterEffects.get_current_path"))
+        return self._handle_return(res)
+    # ========================== R42 Custom ======================================
+
     def _handle_return(self, res):
         """Wraps return, throws ValueError if 'error' key is present."""
         if res and isinstance(res, str) and res != "undefined":

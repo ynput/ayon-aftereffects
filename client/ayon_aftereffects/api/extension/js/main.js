@@ -370,6 +370,17 @@ function main(websocket_url){
                 return result;
             });
     });
+
+    // ========================== R42 Custom ======================================
+    RPC.addRoute('AfterEffects.get_current_path', function (data) {
+        log.warn('Server called client route "get_current_path":', data);
+        return runEvalScript("getCurrentPath()")
+            .then(function(result){
+                log.warn("get_current_path: " + result);
+                return result;
+            });
+    });
+    // ========================== R42 Custom ======================================
 }
 
 /** main entry point **/

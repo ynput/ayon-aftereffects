@@ -886,6 +886,12 @@ function printMsg(msg){
     alert(msg);
 }
 
+// ========================== R42 Custom ======================================
+function getCurrentPath(){
+    return _prepareSingleValue(app.project.file.fsName);
+}
+// ========================== R42 Custom ======================================
+
 function addPlaceholder(name, width, height, fps, duration){
     /** Add AE PlaceholderItem to Project list.
      *
