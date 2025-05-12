@@ -127,11 +127,24 @@ def convert_path_to_backup(file_path):
     directory_name = os.path.dirname(file_path)
     base_name = os.path.basename(file_path)
 
+    all_files = os.listdir(directory_name)
+    numbers = []
+
+    for name in all_files:
+        if re.search(r"v(?=\d)", name, re.IGNORECASE):
+            continue
+        matches = re.findall(r'\d+', name)
+        if matches:
+            numbers.append(int(matches[-1]))
+
+    max_number = max(numbers) if numbers else 1
+    max_number_with_padding = str(max_number+1).zfill(3)
+
     # Remove v from base_name
     match = re.match(r"(.*)_v(\d+)(\..*)", base_name)
     if match:
         base, version, fileext = match.groups()
-        new_name = f"{base}_{version}{fileext}"
+        new_name = f"{base}_{max_number_with_padding}{fileext}"
         new_path = os.path.join(directory_name, new_name)
         return new_path
     else:
