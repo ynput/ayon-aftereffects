@@ -10,6 +10,7 @@ from ayon_core.lib import (
 import os
 import uuid
 import copy
+import re
 
 ''' ------------------
 GENERAL GETTER FUNCTIONS
@@ -121,6 +122,20 @@ def increment_workfile_path():
         full_path = os.path.join(filled_dir, last_version)
         increment_path = path_tools.version_up(full_path)
         return os.path.normpath(increment_path)
+
+def convert_path_to_backup(file_path):
+    directory_name = os.path.dirname(file_path)
+    base_name = os.path.basename(file_path)
+
+    # Remove v from base_name
+    match = re.match(r"(.*)_v(\d+)(\..*)", base_name)
+    if match:
+        base, version, fileext = match.groups()
+        new_name = f"{base}_{version}{fileext}"
+        new_path = os.path.join(directory_name, new_name)
+        return new_path
+    else:
+        return file_path
 
 def get_task_by_name(session_data, task_name=None):
     if not task_name:
