@@ -180,14 +180,15 @@ def save_copy():
 
     current_workfile_path = stub.get_current_path()
     increment_workfile_path = r42_lib.increment_workfile_path()
+    backup_workfile_path = r42_lib.convert_path_to_backup(increment_workfile_path)
 
     # Save a copy (Have to do it manually since AE API doesn't have save a copy)
     stub.save()
-    shutil.copy2(current_workfile_path, increment_workfile_path)
+    shutil.copy2(current_workfile_path, backup_workfile_path)
     stub.print_msg(f"Saved a copy")
 
     # Register that copy to the database
-    r42_lib.r42_publish_workfile(increment_workfile_path)
+    r42_lib.r42_publish_workfile(backup_workfile_path)
     stub.print_msg(f"Registered in database. Done")
 
 
