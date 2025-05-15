@@ -82,6 +82,17 @@
         });
       });
     </script>
+
+    <script type=text/javascript>
+      $(function() {
+        $("a#updateallreviews-button").bind("click", function() {
+          RPC.call('AfterEffects.updateallreviews_route').then(function (data) {
+          }, function (error) {
+              alert(error);
+          });
+        });
+      });
+    </script>
     <!-- ========================== R42 Custom ====================================== -->
 
     <script type=text/javascript>
@@ -176,6 +187,7 @@
             <!-- ========================== R42 Custom ====================================== -->
             <div><a href=# id=separator4><button class="hostFontSize">&nbsp;</button></a></div>
             <div><a href=# id=savecopy-button><button class="hostFontSize">Save Copy...</button></a></div>
+            <div><a href=# id=updateallreviews-button><button class="hostFontSize">Update All Videos...</button></a></div>
             <!-- ========================== R42 Custom ====================================== -->
             <div><a href=# id=separator0><button class="hostFontSize">&nbsp;</button></a></div>
             <div><a href=# id=setresolution-button><button class="hostFontSize">Set Resolution</button></a></div>

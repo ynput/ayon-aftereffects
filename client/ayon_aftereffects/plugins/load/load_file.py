@@ -4,6 +4,7 @@ from ayon_core.pipeline import get_representation_path
 from ayon_aftereffects import api
 from ayon_aftereffects.api.lib import get_unique_layer_name
 
+from ayon_aftereffects.api import r42_lib
 
 class FileLoader(api.AfterEffectsLoader):
     """Load images
@@ -72,12 +73,37 @@ class FileLoader(api.AfterEffectsLoader):
         )
 
     def update(self, container, context):
+        # ============================================
+        import pprint
+        log_file = r"Y:\_THINGS\AdobeLogFile\PremierUpdateLog.log"
+        divider = "=============================================="
+        r42_lib.log_text_to_file(log_file, "<<<<<<<<<<<<<<<<< START >>>>>>>>>>>>>>>>>>>", 'w')
+        # ============================================
         stub = self.get_stub()
         layer = container.pop("layer")
+        # ============================================
+        r42_lib.log_text_to_file(log_file, divider, 'a')
+        layer_to_print = pprint.pformat(layer)
+        r42_lib.log_text_to_file(log_file, "layer_to_print: ", 'a')
+        r42_lib.log_text_to_file(log_file, layer_to_print, 'a')
+        container_to_print = pprint.pformat(container)
+        r42_lib.log_text_to_file(log_file, "\ncontainer_to_print:\n: ", 'a')
+        r42_lib.log_text_to_file(log_file, container_to_print, 'a')
+        # ============================================
 
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
         repre_entity = context["representation"]
+
+        # ============================================
+        r42_lib.log_text_to_file(log_file, divider, 'a')
+        repre_to_print = pprint.pformat(repre_entity)
+        r42_lib.log_text_to_file(log_file, f"folder_name: {folder_name}", 'a')
+        r42_lib.log_text_to_file(log_file, f"product_name: {product_name}", 'a')
+        r42_lib.log_text_to_file(log_file, "repre_to_print: ", 'a')
+        r42_lib.log_text_to_file(log_file, repre_to_print, 'a')
+        r42_lib.log_text_to_file(log_file, "<<<<<<<<<<<<<<<<< END >>>>>>>>>>>>>>>>>>>", 'a')
+        # ============================================
 
         namespace_from_container = re.sub(r'_\d{3}$', '',
                                           container["namespace"])
