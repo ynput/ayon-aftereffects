@@ -324,7 +324,8 @@ def get_video_data(repre_data):
                     "rep_created": modified_time_format
                 }
 
-                video_dict[rep["context"]["subset"]] = data
+                dict_key = f"{rep['context']['subset']}_{rep['context']['output']}"
+                video_dict[dict_key] = data
 
         except TypeError:
             continue
