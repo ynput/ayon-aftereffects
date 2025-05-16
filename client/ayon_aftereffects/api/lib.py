@@ -200,43 +200,12 @@ def update_all_reviews():
     session_data = r42_lib.generate_session_data()
 
 
-    # Get all AYON Layers in Scene
-    existing_layers = stub.get_items(comps=False, folders=False, footages=True)
-
+    # Get all AYON Containers in Scene
     existing_containers = stub.get_metadata()
-
-    # ============================================
-    # Things that are needed
-    '''
-    layer.id = the AE id of the layer (found)
-    layer.name = the name of the layer (found)
-    container["namespace"]
-    folder_name
-    product_name
-    repre_entity
-    
-    '''
-    import pprint
-    log_file = r"Y:\_THINGS\AdobeLogFile\AELibLog.log"
-    divider = "=============================================="
-    r42_lib.log_text_to_file(log_file, "<<<<<<<<<<<<<<<<< START >>>>>>>>>>>>>>>>>>>", 'w')
-    r42_lib.log_text_to_file(log_file, divider, 'a')
-    layer_to_print = pprint.pformat(existing_layers)
-    r42_lib.log_text_to_file(log_file, "layer_to_print: ", 'a')
-    r42_lib.log_text_to_file(log_file, layer_to_print, 'a')
-    r42_lib.log_text_to_file(log_file, divider, 'a')
-    existing_containers_to_print = pprint.pformat(existing_containers)
-    r42_lib.log_text_to_file(log_file, "existing_containers: ", 'a')
-    r42_lib.log_text_to_file(log_file, existing_containers_to_print, 'a')
-    r42_lib.log_text_to_file(log_file, "<<<<<<<<<<<<<<<<< END >>>>>>>>>>>>>>>>>>>", 'a')
-    # ============================================
 
     # Get metadata in valid bins
     for container_metadata in existing_containers:
         # Grab the repre_entity
-        r42_lib.log_text_to_file(log_file, "<<<<<<<<<<<<<<<<< LOOP START >>>>>>>>>>>>>>>>>>>", 'a')
-        r42_lib.log_text_to_file(log_file, container_metadata, 'a')
-        r42_lib.log_text_to_file(log_file, "<<<<<<<<<<<<<<<<< LOOP END >>>>>>>>>>>>>>>>>>>", 'a')
         rep_data = r42_lib.get_representation_by_id(session_data, container_metadata["representation"])
 
         # Look through all available prores and compare their times
