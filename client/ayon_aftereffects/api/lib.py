@@ -211,6 +211,8 @@ def update_all_reviews():
         # Look through all available prores and compare their times
         video_data = r42_lib.get_video_data(rep_data)
         latest_prores_data = r42_lib.compare_prores_data(video_data)
+        if not latest_prores_data:
+            continue
 
         # Update the container with the latest prores
         latest_rep_id = latest_prores_data["id"]
