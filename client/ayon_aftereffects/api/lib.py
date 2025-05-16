@@ -175,7 +175,6 @@ def save_copy():
     """ Saves a copy of the current workfile and publish it. Continue working on current workfile
 
     """
-    session_data = r42_lib.generate_session_data()
     stub = get_stub()
 
     current_workfile_path = stub.get_current_path()
@@ -191,6 +190,34 @@ def save_copy():
     r42_lib.r42_publish_workfile(backup_workfile_path)
     stub.print_msg(f"Registered in database. Done")
 
+def update_all_reviews():
+    """ Update all containers to the latest reviews, regardless of DCC based on R42 format
+    """
+    stub = get_stub()
+    stub.print_msg("Updating all reviews, please wait")
+
+    # Get session data
+    session_data = r42_lib.generate_session_data()
+
+
+    # Get all AYON Containers in Scene
+    existing_containers = stub.get_metadata()
+
+    # Get metadata in valid bins
+    for container_metadata in existing_containers:
+        # Grab the repre_entity
+        rep_data = r42_lib.get_representation_by_id(session_data, container_metadata["representation"])
+
+        # Look through all available prores and compare their times
+        video_data = r42_lib.get_video_data(rep_data)
+        latest_prores_data = r42_lib.compare_prores_data(video_data)
+
+        # Update the container with the latest prores
+        latest_rep_id = latest_prores_data["id"]
+        debug_rep_data = r42_lib.get_representation_by_id(session_data, latest_rep_id)
+        r42_lib.update_container(container_metadata, debug_rep_data, stub)
+
+    stub.print_msg("Videos have been updated")
 
 # ========================== R42 Custom ======================================
 

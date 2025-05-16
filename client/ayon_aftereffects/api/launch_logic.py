@@ -23,7 +23,7 @@ from .webserver import WebServerTool
 from .ws_stub import get_stub
 from .lib import set_settings
 # ========================== R42 Custom ======================================
-from .lib import save_copy
+from .lib import save_copy, update_all_reviews
 # ========================== R42 Custom ======================================
 
 log = logging.getLogger(__name__)
@@ -329,6 +329,9 @@ class AfterEffectsRoute(WebSocketRoute):
     # ========================== R42 Custom ======================================
     async def savecopy_route(self):
         self._savecopy_route()
+
+    async def updateallreviews_route(self):
+        self._updateallreviews_route()
     # ========================== R42 Custom ======================================
 
     async def sceneinventory_route(self):
@@ -370,6 +373,13 @@ class AfterEffectsRoute(WebSocketRoute):
     # ========================== R42 Custom ======================================
     def _savecopy_route(self):
         partial_method = functools.partial(save_copy)
+        ProcessLauncher.execute_in_main_thread(partial_method)
+
+        # Required return statement.
+        return "nothing"
+
+    def _updateallreviews_route(self):
+        partial_method = functools.partial(update_all_reviews)
         ProcessLauncher.execute_in_main_thread(partial_method)
 
         # Required return statement.

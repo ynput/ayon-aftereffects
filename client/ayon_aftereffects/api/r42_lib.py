@@ -1,4 +1,4 @@
-from ayon_core.pipeline import context_tools, anatomy
+from ayon_core.pipeline import context_tools, anatomy, get_representation_path
 import ayon_api
 from ayon_api import operations as op
 from ayon_core.lib import (
@@ -11,6 +11,48 @@ import os
 import uuid
 import copy
 import re
+from datetime import datetime
+
+''' ------------------
+SIMPLE LOGGING
+------------------ '''
+import logging
+
+def log_text_to_file(log_file, text, mode):
+    logger = logging.getLogger("R42_Debug_Adobe")
+    logger.setLevel(logging.DEBUG)
+
+    handler = logging.FileHandler(log_file, mode, 'utf-8')
+    formatter = logging.Formatter("%(levelname)s:%(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    logger.debug(text)
+
+''' ------------------
+LIB FUNCTIONS TO AVOID CYCLIC IMPORTS
+------------------ '''
+def get_unique_layer_name(layers, name):
+    """
+        Gets all layer names and if 'name' is present in them, increases
+        suffix by 1 (eg. creates unique layer name - for Loader)
+    Args:
+        layers (list): of strings, names only
+        name (string):  checked value
+
+    Returns:
+        (string): name_00X (without version)
+    """
+    names = {}
+    for layer in layers:
+        layer_name = re.sub(r'_\d{3}$', '', layer)
+        if layer_name in names.keys():
+            names[layer_name] = names[layer_name] + 1
+        else:
+            names[layer_name] = 1
+    occurrences = names.get(name, 0)
+
+    return "{}_{:0>3d}".format(name, occurrences + 1)
 
 ''' ------------------
 GENERAL GETTER FUNCTIONS
@@ -160,6 +202,18 @@ def get_task_by_name(session_data, task_name=None):
                                           task_name=task_name)
     return task_data
 
+def get_version_by_id(session_data, version_id):
+    project_name = session_data["project_name"]
+    version_data = ayon_api.get_version_by_id(project_name=project_name,
+                                              version_id=version_id)
+    return version_data
+
+def get_representation_by_id(session_data, representation_id):
+    project_name = session_data["project_name"]
+    representation_data = ayon_api.get_representation_by_id(project_name=project_name,
+                                                            representation_id=representation_id)
+    return representation_data
+
 ''' ------------------
 GENERAL CREATOR FUNCTIONS
 ------------------ '''
@@ -214,3 +268,156 @@ def r42_publish_workfile(file_path):
     op_session = create_operation_link_session()
     workfile_info = create_workfile_doc(session_data, file_path)
     create_entity_in_database(session_data, "workfile", workfile_info, op_session)
+
+''' ------------------
+UPDATE FUNCTIONS
+------------------ '''
+def get_video_data(repre_data):
+    video_dict = {}
+    folder_name = repre_data['context']['folder']['name']
+    project_name = repre_data['context']['project']['name']
+    folder_data = ayon_api.get_folder_by_name(project_name=project_name,
+                                              folder_name=folder_name)
+    # ---- Query the products ----
+    product_list = ayon_api.get_products(project_name=project_name,
+                                         folder_ids=[folder_data['id']],
+                                         product_types=["review", "render"],
+                                         )
+    product_list = list(product_list)
+
+    # ---- Query the versions ----
+    version_list = []
+    for product in product_list:
+        product_id = product["id"]
+        version_data_generator = ayon_api.get_versions(project_name=project_name,
+                                                       product_ids=[product_id])
+        version_data = [*version_data_generator]
+        for v in version_data:
+            version_list.append(v)
+
+    # ---- Query the representation ----
+    for version in version_list:
+        try:
+            representation_data = ayon_api.get_representations(project_name=project_name,
+                                                               version_ids=[version['id']])
+            rep_data_as_list = [*representation_data]
+            version_name = version["name"]
+
+            for rep in rep_data_as_list:
+                valid = check_valid_video_representation(rep, version_name)
+                if valid == 0:
+                    continue
+
+                file_path = rep['attrib']['path']
+                modified_time = os.path.getmtime(file_path)
+                modified_time_format = datetime.fromtimestamp(modified_time).isoformat()
+
+                # ---- Extract out the essential data ----
+                data = {
+                    "id": rep["id"],
+                    "subset_name": rep["context"]["subset"],
+                    "rep_path": rep['attrib']['path'],
+                    "project_name": project_name,
+                    "project_code": rep["context"]["project"]["code"],
+                    "shot_name": rep["context"]["folder"]["name"],
+                    "folder_path": folder_data['path'],
+                    "rep_created": modified_time_format
+                }
+
+                dict_key = f"{rep['context']['subset']}_{rep['context']['output']}"
+                video_dict[dict_key] = data
+
+        except TypeError:
+            continue
+
+    return video_dict
+
+def check_valid_video_representation(rep_data, version_name):
+        # ---- Check if it is ProRes representation ----
+        '''
+        0 - Not Valid
+        1 - Review
+        2 - Exrs
+        '''
+        project_name = rep_data['context']['project']['name']
+        try:
+            if rep_data["context"]["output"] not in ("ProRes", "1080p", "4K"):
+                return 0
+        except KeyError:
+            return 0
+
+        # ---- Check if it is storyboard comp ----
+        task_type = rep_data["context"]["task"]["type"]
+        if task_type == "Storyboard Comp":
+            return 0
+
+        # ---- Check if the folder is shot context ----
+        shot_name = rep_data["context"]["folder"]["name"]
+        folder_data = ayon_api.get_folder_by_name(project_name=project_name,
+                                                  folder_name=shot_name)
+        if folder_data["folderType"] != "Shot":
+            return 0
+
+        # ---- Check if the version is a hero ----
+        if version_name == "HERO":
+            return 0
+
+        return 1
+
+def compare_prores_data(video_dict):
+    latest_instance = None
+    for key in video_dict:
+        instance = video_dict[key]
+        if not latest_instance:
+            latest_instance = instance
+            continue
+
+        current_time = instance["rep_created"]
+        latest_time = latest_instance["rep_created"]
+
+        # Parse the datetime strings into datetime objects
+        datetime_obj1 = datetime.fromisoformat(current_time)
+        datetime_obj2 = datetime.fromisoformat(latest_time)
+
+        # Compare the datetime objects
+        if datetime_obj1 > datetime_obj2:
+            latest_instance = instance
+        else:
+            continue
+
+    return latest_instance
+
+def update_container(orig_container, repre_data, stub):
+    # Get new container name
+    folder_name = repre_data["context"]["folder"]["name"]
+    product_name = repre_data["context"]["product"]["name"]
+    new_layer_name = f"{folder_name}_{product_name}"
+
+    # switching assets
+    existing_footages = stub.get_items(
+        comps=False, folders=False, footages=True)
+    existing_footage_names = [footage_item.name for footage_item in existing_footages]
+
+    namespace_from_container = re.sub(r'_\d{3}$', '',
+                                      orig_container["namespace"])
+
+    if namespace_from_container != new_layer_name:
+        layers = stub.get_items(comps=True)
+        existing_layers = [layer.name for layer in layers]
+        layer_name = get_unique_layer_name(
+            existing_layers,
+            "{}_{}".format(folder_name, product_name))
+    else:  # switching version - keep same name
+        layer_name = orig_container["namespace"]
+    path = get_representation_path(repre_data)
+
+    if len(repre_data["files"]) > 1:
+        path = os.path.dirname(path)
+
+    layer_id = orig_container["members"][0]
+    stub.replace_item(layer_id, path, stub.LOADED_ICON + layer_name)
+    stub.imprint(
+        layer_id, {"representation": repre_data["id"],
+                   "name": product_name,
+                   "namespace": layer_name}
+    )

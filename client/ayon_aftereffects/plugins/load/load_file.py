@@ -4,7 +4,6 @@ from ayon_core.pipeline import get_representation_path
 from ayon_aftereffects import api
 from ayon_aftereffects.api.lib import get_unique_layer_name
 
-
 class FileLoader(api.AfterEffectsLoader):
     """Load images
 
