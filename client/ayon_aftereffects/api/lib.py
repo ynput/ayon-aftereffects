@@ -204,7 +204,12 @@ def update_all_reviews():
     existing_containers = stub.get_metadata()
 
     # Get metadata in valid bins
+    count = 0
     for container_metadata in existing_containers:
+        # Skip non AYON container item.
+        if container_metadata["id"] != "ayon.load.container":
+            continue
+
         # Grab the repre_entity
         rep_data = r42_lib.get_representation_by_id(session_data, container_metadata["representation"])
 
@@ -216,10 +221,15 @@ def update_all_reviews():
 
         # Update the container with the latest prores
         latest_rep_id = latest_prores_data["id"]
-        debug_rep_data = r42_lib.get_representation_by_id(session_data, latest_rep_id)
-        r42_lib.update_container(container_metadata, debug_rep_data, stub)
+        latest_rep_data = r42_lib.get_representation_by_id(session_data, latest_rep_id)
 
-    stub.print_msg("Videos have been updated")
+        if rep_data["versionId"] == latest_rep_data["versionId"]:
+            continue
+
+        r42_lib.update_container(container_metadata, latest_rep_data, stub)
+        count += 1
+
+    stub.print_msg(f"{count} Videos have been updated")
 
 # ========================== R42 Custom ======================================
 
