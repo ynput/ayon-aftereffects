@@ -212,6 +212,8 @@ def update_all_reviews():
 
         # Grab the repre_entity
         rep_data = r42_lib.get_representation_by_id(session_data, container_metadata["representation"])
+        if rep_data["context"]["family"] not in ("review", "render"):
+            continue
 
         # Look through all available prores and compare their times
         video_data = r42_lib.get_video_data(rep_data)
