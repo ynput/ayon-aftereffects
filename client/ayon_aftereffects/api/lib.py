@@ -225,7 +225,7 @@ def update_all_reviews():
         latest_rep_id = latest_prores_data["id"]
         latest_rep_data = r42_lib.get_representation_by_id(session_data, latest_rep_id)
 
-        if rep_data["versionId"] == latest_rep_data["versionId"]:
+        if rep_data["id"] == latest_rep_data["id"]:
             continue
 
         r42_lib.update_container(container_metadata, latest_rep_data, stub)
