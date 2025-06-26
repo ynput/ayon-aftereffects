@@ -24,12 +24,7 @@ log = logging.getLogger(__name__)
 
 
 class WebServerTool:
-    """
-        Basic POC implementation of asychronic websocket RPC server.
-        Uses class in external_app_1.py to mimic implementation for single
-        external application.
-        'test_client' folder contains two test implementations of client
-    """
+    """Basic asynchronous websocket RPC server."""
     _instance = None
 
     def __init__(self):
@@ -57,6 +52,10 @@ class WebServerTool:
         # add route with multiple methods for single "external app"
         self.webserver_thread = WebServerThread(self, self.port)
 
+    def get_websocket_url(self):
+        """Return websocket URL for the server from the host name and port."""
+        return f"ws://{self.host_name}:{self.port}/ws/"
+
     def add_route(self, *args, **kwargs):
         self.app.router.add_route(*args, **kwargs)
 
@@ -78,7 +77,7 @@ class WebServerTool:
             but one already running, without
             this publish would point to old context.
         """
-        client = WSRPCClient(os.getenv("WEBSOCKET_URL"),
+        client = WSRPCClient(self.get_websocket_url(),
                              loop=asyncio.get_event_loop())
         await client.connect()
 
