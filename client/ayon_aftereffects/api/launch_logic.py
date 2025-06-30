@@ -231,10 +231,8 @@ class ProcessLauncher(QtCore.QObject):
         )
 
         self._websocket_server = websocket_server = WebServerTool()
-        if websocket_server.port_occupied(
-            websocket_server.host_name,
-            websocket_server.port
-        ):
+        port = self.find_available_port(websocket_server)
+        if port is None:
             self.log.info(
                 "Server already running, sending actual context and exit."
             )
@@ -250,18 +248,57 @@ class ProcessLauncher(QtCore.QObject):
         WebSocketAsync.add_route(
             self.route_name, AfterEffectsRoute
         )
-        self.log.info("Starting websocket server for host communication")
+
+        self.log.info(
+            "Starting websocket server for host communication at "
+            f"{websocket_server.host_name}:{websocket_server.port}"
+        )
         websocket_server.start_server()
+
+    def find_available_port(self, websocket_server: WebServerTool):
+        """Find an available port for the websocket server.
+
+        This will update `self.port` and `self.webserver_thread.port` to match
+        the port if a valid entry is found. It may be better to
+        """
+        # TODO: Do not hardcode the port range, but use a config value?
+        alternative_ports = list(range(8097, 8110))
+        alternative_index = 0
+        while websocket_server.port_occupied(
+            websocket_server.host_name,
+            websocket_server.port
+        ):
+            if alternative_index > len(alternative_ports):
+                return None
+
+            alternative_port: int = alternative_ports[alternative_index]
+            self.log.info(f"Testing alternative port: {alternative_port}")
+            websocket_server.port = alternative_port
+
+            # TODO: This is a bit of a hack, but the webserver thread needs
+            #  to follow along, because it gets initialized on `__init__`.
+            #  Probably a better way?
+            websocket_server.webserver_thread.port = alternative_port
+            alternative_index += 1
+        return websocket_server.port
 
     def _start_process(self):
         if self._process is not None:
             return
         self.log.info("Starting host process")
+
+        # Pass along the resulting websocket URL to the host process.
+        # It may have been changed by the port finding logic.
+        environ = os.environ.copy()
+        environ["WEBSOCKET_URL"] = "ws://localhost:{}/ws/".format(
+            self._websocket_server.port
+        )
         try:
             self._process = subprocess.Popen(
                 self._subprocess_args,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
+                env=environ
             )
         except Exception:
             self.log.info("exce", exc_info=True)
