@@ -52,7 +52,7 @@ def main(*subprocess_args):
         # Backwards compatibility
         os.getenv("AVALON_AFTEREFFECTS_WORKFILES_ON_LAUNCH", True)
     )
-    workfiles_on_launch = env_value_to_bool(env_workfiles_on_launch)
+    workfiles_on_launch = env_value_to_bool(value=env_workfiles_on_launch)
 
     if is_in_tests():
         manager = AddonsManager()
