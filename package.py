@@ -1,6 +1,6 @@
 name = "aftereffects"
 title = "AfterEffects"
-version = "0.2.10+dev.1"
+version = "0.2.11+dev.1"
 app_host_name = "aftereffects"
 client_dir = "ayon_aftereffects"
 

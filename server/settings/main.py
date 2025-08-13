@@ -38,7 +38,7 @@ class AfterEffectsSettings(BaseSettingsModel):
 
 
 DEFAULT_AFTEREFFECTS_SETTING = {
-    "auto_install_extension": False,
+    "auto_install_extension": True,
     "create": {
         "RenderCreator": {
             "mark_for_review": True,
