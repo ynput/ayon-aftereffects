@@ -1,5 +1,3 @@
-import ayon_api
-
 from ayon_core.pipeline import (
     AutoCreator,
     CreatedInstance
