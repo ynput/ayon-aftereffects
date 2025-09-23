@@ -38,29 +38,27 @@ class AEWorkfileCreator(AutoCreator):
                 existing_instance = instance
                 break
 
-        context = self.create_context
-        project_name = context.get_current_project_name()
-        folder_path = context.get_current_folder_path()
-        task_name = context.get_current_task_name()
-        host_name = context.host_name
+        project_entity = self.create_context.get_current_project_entity()
+        folder_entity = self.create_context.get_current_folder_entity()
+        task_entity = self.create_context.get_current_task_entity()
+
+        project_name = project_entity["name"]
+        folder_path = folder_entity["path"]
+        task_name = task_entity["name"]
+        host_name = self.create_context.host_name
 
         existing_folder_path = None
         if existing_instance is not None:
             existing_folder_path = existing_instance.get("folderPath")
 
         if existing_instance is None:
-            folder_entity = ayon_api.get_folder_by_path(
-                project_name, folder_path
-            )
-            task_entity = ayon_api.get_task_by_name(
-                project_name, folder_entity["id"], task_name
-            )
             product_name = self.get_product_name(
-                project_name,
-                folder_entity,
-                task_entity,
-                self.default_variant,
-                host_name,
+                project_name=project_name,
+                project_entity=project_entity,
+                folder_entity=folder_entity,
+                task_entity=task_entity,
+                variant=self.default_variant,
+                host_name=host_name,
             )
             data = {
                 "folderPath": folder_path,
@@ -88,18 +86,13 @@ class AEWorkfileCreator(AutoCreator):
             existing_folder_path != folder_path
             or existing_instance["task"] != task_name
         ):
-            folder_entity = ayon_api.get_folder_by_path(
-                project_name, folder_path
-            )
-            task_entity = ayon_api.get_task_by_name(
-                project_name, folder_entity["id"], task_name
-            )
             product_name = self.get_product_name(
-                project_name,
-                folder_entity,
-                task_entity,
-                self.default_variant,
-                host_name,
+                project_name=project_name,
+                project_entity=project_entity,
+                folder_entity=folder_entity,
+                task_entity=task_entity,
+                variant=self.default_variant,
+                host_name=host_name,
             )
             existing_instance["folderPath"] = folder_path
             existing_instance["task"] = task_name
