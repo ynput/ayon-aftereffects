@@ -9,6 +9,7 @@ class CollectWorkfile(pyblish.api.InstancePlugin):
     label = "Collect After Effects Workfile"
     order = pyblish.api.CollectorOrder + 0.1
     families = ["workfile"]
+    hosts = ["aftereffects"]
 
     def process(self, instance):
         current_file = instance.context.data["currentFile"]
