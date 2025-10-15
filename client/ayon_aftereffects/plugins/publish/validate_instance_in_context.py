@@ -12,7 +12,7 @@ class ValidateInstanceInContext(pyblish.api.InstancePlugin,
                                 OptionalPyblishPluginMixin):
     """Validate the instance folder is the current selected context folder.
 
-    As it might happen that multiple worfiles are opened at same time,
+    As it might happen that multiple workfiles are opened at same time,
     switching between them would mess with selected context. (From Launcher
     or Ftrack).
 
