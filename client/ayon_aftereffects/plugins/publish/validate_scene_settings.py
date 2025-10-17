@@ -19,8 +19,9 @@ from ayon_aftereffects.api import get_entity_attributes
 from ayon_aftereffects.api.lib import set_settings
 
 
-class ValidateSceneSettings(OptionalPyblishPluginMixin,
-                            pyblish.api.InstancePlugin):
+class ValidateSceneSettings(
+    OptionalPyblishPluginMixin, pyblish.api.InstancePlugin
+):
     """Ensures that Composition Settings (right mouse on comp) are same as
     task or folder attributes in AYON.
 
@@ -159,8 +160,11 @@ class ValidateSceneSettings(OptionalPyblishPluginMixin,
                 "invalid_setting_str": invalid_setting_str,
                 "invalid_keys_str": invalid_keys_str
             }
-            raise PublishXmlValidationError(self, msg,
-                                            formatting_data=formatting_data)
+            raise PublishXmlValidationError(
+                self,
+                msg,
+                formatting_data=formatting_data
+            )
 
         if not os.path.exists(instance.data.get("source")):
             scene_url = instance.data.get("source")
@@ -170,8 +174,13 @@ class ValidateSceneSettings(OptionalPyblishPluginMixin,
             formatting_data = {
                 "scene_url": scene_url
             }
-            raise PublishXmlValidationError(self, msg, key="file_not_found",
-                                            formatting_data=formatting_data)
+            raise PublishXmlValidationError(
+                self,
+                msg,
+                key="file_not_found",
+                formatting_data=formatting_data
+            )
+
     @classmethod
     def repair(cls, instance):
         # settings fail - could fix it
