@@ -5,21 +5,22 @@
 <description>
 ## Invalid scene setting found
 
-One of the settings in a scene doesn't match to folder settings in database.
+At least one of the settings in a scene doesn't match task settings in database.
 
 {invalid_setting_str}
 
 ### How to repair?
 
-Change values for {invalid_keys_str} in the scene OR change them in the folder database if they are wrong there.
+Change values for '{invalid_keys_str}' in the scene OR change them on a task on AYON server if they are wrong there
+    OR use `Repair` button to reset all settings (duration, resolution) according to values set on the task.
 
-    In the scene it is right mouse click on published composition > `Composition Settings`.
+    In the scene it is right mouse click on failed published composition > `Composition Settings`.
 </description>
 <detail>
 ### __Detailed Info__ (optional)
 
-This error is shown when for example resolution in the scene doesn't match to resolution set on the folder in the database.
-Either value in the database or in the scene is wrong.
+This error is shown when for example resolution in the scene doesn't match to resolution set on the task on AYON server.
+Either value in the AYON or in the scene is wrong.
 </detail>
 </error>
 <error id="file_not_found">
