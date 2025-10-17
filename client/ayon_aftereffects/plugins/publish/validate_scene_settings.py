@@ -13,7 +13,10 @@ from ayon_core.pipeline import (
     PublishXmlValidationError,
     OptionalPyblishPluginMixin
 )
+from ayon_core.pipeline.publish import RepairAction
+
 from ayon_aftereffects.api import get_entity_attributes
+from ayon_aftereffects.api.lib import set_settings
 
 
 class ValidateSceneSettings(OptionalPyblishPluginMixin,
@@ -53,6 +56,7 @@ class ValidateSceneSettings(OptionalPyblishPluginMixin,
 
     order = pyblish.api.ValidatorOrder
     label = "Validate Scene Settings"
+    actions = [RepairAction]
     families = ["render.farm", "render.local", "render"]
     hosts = ["aftereffects"]
     settings_category = "aftereffects"
@@ -168,3 +172,8 @@ class ValidateSceneSettings(OptionalPyblishPluginMixin,
             }
             raise PublishXmlValidationError(self, msg, key="file_not_found",
                                             formatting_data=formatting_data)
+    @classmethod
+    def repair(cls, instance):
+        # settings fail - could fix it
+        if os.path.exists(instance.data.get("source")):
+            set_settings(True,True, comp_ids=[instance.data["comp_id"]])
