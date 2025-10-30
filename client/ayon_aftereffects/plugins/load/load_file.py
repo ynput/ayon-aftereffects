@@ -24,7 +24,7 @@ class FileLoader(api.AfterEffectsLoader):
 
     def load(self, context, name=None, namespace=None, data=None):
         stub = self.get_stub()
-        layers = stub.get_items(comps=True, folders=True, footages=True)
+        layers = stub.get_items(comps=True)
         existing_layers = [layer.name for layer in layers]
         comp_name = get_unique_layer_name(
             existing_layers, "{}_{}".format(
