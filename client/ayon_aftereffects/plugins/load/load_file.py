@@ -3,7 +3,7 @@ import os
 
 from ayon_core.pipeline import get_representation_path
 from ayon_aftereffects import api
-from ayon_aftereffects.api.lib import get_unique_layer_name
+from ayon_aftereffects.api.lib import get_unique_item_name
 
 
 class FileLoader(api.AfterEffectsLoader):
@@ -25,10 +25,9 @@ class FileLoader(api.AfterEffectsLoader):
 
     def load(self, context, name=None, namespace=None, data=None):
         stub = self.get_stub()
-        layers = stub.get_items(comps=True)
-        existing_layers = [layer.name for layer in layers]
-        comp_name = get_unique_layer_name(
-            existing_layers, f"{context['folder']['name']}_{name}"
+        loaded_item_name = f"{context['folder']['name']}_{name}"
+        loaded_item_name = self._get_unique_loaded_item_name(
+            stub, loaded_item_name
         )
 
         import_options = {}
@@ -49,29 +48,29 @@ class FileLoader(api.AfterEffectsLoader):
         if '.psd' in path:
             import_options['ImportAsType'] = 'ImportAsType.COMP'
 
-        comp = stub.import_file(
-            path, stub.LOADED_ICON + comp_name, import_options
+        loaded_item = stub.import_file(
+            path, stub.LOADED_ICON + loaded_item_name, import_options
         )
-        if not comp:
+        if not loaded_item:
             self.log.warning(
                 f"Representation `{path}` is failing to load"
             )
             self.log.warning("Check host app for alert error.")
             return
 
-        self[:] = [comp]
-        namespace = namespace or comp_name
+        self[:] = [loaded_item]
+        namespace = namespace or loaded_item_name
         return api.containerise(
             name,
             namespace,
-            comp,
+            loaded_item,
             context,
             self.__class__.__name__
         )
 
     def update(self, container, context):
         stub = self.get_stub()
-        layer = container.pop("layer")
+        item = container.pop("layer")
 
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
@@ -80,28 +79,25 @@ class FileLoader(api.AfterEffectsLoader):
         namespace_from_container = re.sub(
             r"_\d{3}$", "", container["namespace"]
         )
-        layer_name = f"{folder_name}_{product_name}"
 
-        if namespace_from_container != layer_name:
-            layers = stub.get_items(comps=True)
-            existing_layers = [layer.name for layer in layers]
-            layer_name = get_unique_layer_name(
-                existing_layers,
-                layer_name
+        loaded_item_name = f"{folder_name}_{product_name}"
+        if namespace_from_container != loaded_item_name:
+            loaded_item_name = self._get_unique_loaded_item_name(
+                stub, loaded_item_name
             )
         else:  # switching version - keep same name
-            layer_name = container["namespace"]
+            loaded_item_name = container["namespace"]
         path = get_representation_path(repre_entity)
 
         if len(repre_entity["files"]) > 1:
            path = os.path.dirname(path)
-        stub.replace_item(layer.id, path, stub.LOADED_ICON + layer_name)
+        stub.replace_item(item.id, path, stub.LOADED_ICON + loaded_item_name)
         stub.imprint(
-            layer.id,
+            item.id,
             {
                 "representation": repre_entity["id"],
                 "name": product_name,
-                "namespace": layer_name
+                "namespace": loaded_item_name
             }
         )
 
@@ -112,9 +108,19 @@ class FileLoader(api.AfterEffectsLoader):
             container (dict): container to be removed - used to get layer_id
         """
         stub = self.get_stub()
-        layer = container.pop("layer")
-        stub.imprint(layer.id, {})
-        stub.delete_item(layer.id)
+        item = container.pop("layer")
+        stub.imprint(item.id, {})
+        stub.delete_item(item.id)
 
     def switch(self, container, context):
         self.update(container, context)
+
+    def _get_unique_loaded_item_name(self, stub, loaded_item_name):
+        footages = stub.get_items(comps=False, footages=True, folders=False)
+        existing_footage_names = [
+            footage.name.replace(stub.LOADED_ICON, "") for footage in footages
+        ]
+        loaded_item_name = get_unique_item_name(
+            existing_footage_names, loaded_item_name
+        )
+        return loaded_item_name
