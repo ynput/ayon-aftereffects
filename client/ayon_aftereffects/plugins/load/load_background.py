@@ -5,7 +5,7 @@ from ayon_core.pipeline import get_representation_path
 from ayon_aftereffects import api
 from ayon_aftereffects.api.lib import (
     get_background_layers,
-    get_unique_layer_name,
+    get_unique_item_name,
 )
 
 
@@ -29,7 +29,7 @@ class BackgroundLoader(api.AfterEffectsLoader):
         existing_items = [layer.name.replace(stub.LOADED_ICON, '')
                           for layer in items]
 
-        comp_name = get_unique_layer_name(
+        comp_name = get_unique_item_name(
             existing_items,
             "{}_{}".format(context["folder"]["name"], name))
 
@@ -73,7 +73,7 @@ class BackgroundLoader(api.AfterEffectsLoader):
         if namespace_from_container != comp_name:
             items = stub.get_items(comps=True)
             existing_items = [layer.name for layer in items]
-            comp_name = get_unique_layer_name(
+            comp_name = get_unique_item_name(
                 existing_items,
                 "{}_{}".format(folder_name, product_name))
         else:  # switching version - keep same name
