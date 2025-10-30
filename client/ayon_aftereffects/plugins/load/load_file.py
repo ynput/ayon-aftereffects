@@ -1,5 +1,6 @@
 import re
 import os
+
 from ayon_core.pipeline import get_representation_path
 from ayon_aftereffects import api
 from ayon_aftereffects.api.lib import get_unique_layer_name
@@ -40,18 +41,21 @@ class FileLoader(api.AfterEffectsLoader):
         if not path:
             repr_id = context["representation"]["id"]
             self.log.warning(
-                "Representation id `{}` is failing to load".format(repr_id))
+                f"Representation id `{repr_id}` is failing to load"
+            )
             return
 
         path = path.replace("\\", "/")
         if '.psd' in path:
             import_options['ImportAsType'] = 'ImportAsType.COMP'
 
-        comp = stub.import_file(path, stub.LOADED_ICON + comp_name,
-                                import_options)
+        comp = stub.import_file(
+            path, stub.LOADED_ICON + comp_name, import_options
+        )
         if not comp:
             self.log.warning(
-                "Representation `{}` is failing to load".format(path))
+                f"Representation `{path}` is failing to load"
+            )
             self.log.warning("Check host app for alert error.")
             return
 
@@ -73,28 +77,32 @@ class FileLoader(api.AfterEffectsLoader):
         product_name = context["product"]["name"]
         repre_entity = context["representation"]
 
-        namespace_from_container = re.sub(r'_\d{3}$', '',
-                                          container["namespace"])
-        layer_name = "{}_{}".format(folder_name, product_name)
-        #
+        namespace_from_container = re.sub(
+            r"_\d{3}$", "", container["namespace"]
+        )
+        layer_name = f"{folder_name}_{product_name}"
+
         if namespace_from_container != layer_name:
             layers = stub.get_items(comps=True)
             existing_layers = [layer.name for layer in layers]
             layer_name = get_unique_layer_name(
                 existing_layers,
-                "{}_{}".format(folder_name, product_name))
+                layer_name
+            )
         else:  # switching version - keep same name
             layer_name = container["namespace"]
         path = get_representation_path(repre_entity)
 
         if len(repre_entity["files"]) > 1:
            path = os.path.dirname(path)
-        # with aftereffects.maintained_selection():  # TODO
         stub.replace_item(layer.id, path, stub.LOADED_ICON + layer_name)
         stub.imprint(
-            layer.id, {"representation": repre_entity["id"],
-                       "name": product_name,
-                       "namespace": layer_name}
+            layer.id,
+            {
+                "representation": repre_entity["id"],
+                "name": product_name,
+                "namespace": layer_name
+            }
         )
 
     def remove(self, container):
