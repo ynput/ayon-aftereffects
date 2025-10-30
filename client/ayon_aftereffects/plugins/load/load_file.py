@@ -27,9 +27,7 @@ class FileLoader(api.AfterEffectsLoader):
         layers = stub.get_items(comps=True)
         existing_layers = [layer.name for layer in layers]
         comp_name = get_unique_layer_name(
-            existing_layers, "{}_{}".format(
-                context["folder"]["name"], name
-            )
+            existing_layers, f"{context['folder']['name']}_{name}"
         )
 
         import_options = {}
