@@ -24,10 +24,6 @@ class FileLoader(api.AfterEffectsLoader):
 
     def load(self, context, name=None, namespace=None, data=None):
         stub = self.get_stub()
-        selected_folders = stub.get_selected_items(
-            comps=False, folders=True, footages=False)
-        if selected_folders:
-            stub.select_items([folder.id for folder in selected_folders])
         layers = stub.get_items(comps=True, folders=True, footages=True)
         existing_layers = [layer.name for layer in layers]
         comp_name = get_unique_layer_name(
