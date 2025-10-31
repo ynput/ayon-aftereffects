@@ -49,12 +49,11 @@ def get_unique_item_name(items, name):
         (string): name_00X (without version)
     """
     names = {}
+    index_regex = re.compile(r"_\d{3}$")
     for item in items:
-        item_name = re.sub(r"_\d{3}$", "", item)
-        if item_name in names.keys():
-            names[item_name] = names[item_name] + 1
-        else:
-            names[item_name] = 1
+        item_name = index_regex.sub("", item)
+        names.setdefault(item_name, 0)
+        names[item_name] += 1
     occurrences = names.get(name, 0)
 
     return "{}_{:0>3d}".format(name, occurrences + 1)
