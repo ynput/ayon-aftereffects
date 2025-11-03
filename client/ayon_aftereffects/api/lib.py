@@ -34,24 +34,26 @@ def get_extension_manifest_path():
     )
 
 
-def get_unique_layer_name(layers, name):
-    """
-        Gets all layer names and if 'name' is present in them, increases
-        suffix by 1 (eg. creates unique layer name - for Loader)
+def get_unique_item_name(items, name):
+    """Creates unique name for 'item'.
+
+    Gets all item names (compositions|containers) and if 'name' is
+    present in them, increases suffix by 1 (eg. creates unique item name
+      - for Loader)
+
     Args:
-        layers (list): of strings, names only
+        items (list): of strings, names only
         name (string):  checked value
 
     Returns:
         (string): name_00X (without version)
     """
     names = {}
-    for layer in layers:
-        layer_name = re.sub(r'_\d{3}$', '', layer)
-        if layer_name in names.keys():
-            names[layer_name] = names[layer_name] + 1
-        else:
-            names[layer_name] = 1
+    index_regex = re.compile(r"_\d{3}$")
+    for item in items:
+        item_name = index_regex.sub("", item)
+        names.setdefault(item_name, 0)
+        names[item_name] += 1
     occurrences = names.get(name, 0)
 
     return "{}_{:0>3d}".format(name, occurrences + 1)
