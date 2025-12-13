@@ -138,6 +138,17 @@
     </script>
 
     <script type=text/javascript>
+      $(function() {
+        $("a#script-editor-button").bind("click", function() {
+          RPC.call('AfterEffects.script_editor_route').then(function (data) {
+          }, function (error) {
+              alert(error);
+          });
+        });
+      });
+    </script>
+
+    <script type=text/javascript>
             $(function() {
               $("a#experimental-button").bind("click", function() {
                 RPC.call('AfterEffects.experimental_tools_route').then(function (data) {
@@ -169,6 +180,7 @@
             <div><a href=# id=update-placeholder-button><button class="hostFontSize">Update placeholder</button></a></div>
             <div><a href=# id=build-workfile-button><button class="hostFontSize">Build Workfile from template</button></a></div>
             <div><a href=# id=separator3><button class="hostFontSize">&nbsp;</button></a></div>
+            <div><a href=# id=script-editor-button><button class="hostFontSize">Script Editor</button></a></div>
             <div><a href=# id=experimental-button><button class="hostFontSize">Experimental Tools...</button></a></div>
         </div>
 

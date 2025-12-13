@@ -21,7 +21,7 @@ from ayon_core.tools.utils import host_tools, get_ayon_qt_app
 
 from .webserver import WebServerTool
 from .ws_stub import get_stub
-from .lib import set_settings
+from .lib import set_settings, show_script_editor
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -372,6 +372,13 @@ class AfterEffectsRoute(WebSocketRoute):
 
     async def setall_route(self):
         self._settings_route(True, True)
+
+    async def script_editor_route(self):
+        partial_method = functools.partial(show_script_editor)
+        ProcessLauncher.execute_in_main_thread(partial_method)
+
+        # Required return statement.
+        return "nothing"
 
     async def experimental_tools_route(self):
         self._tool_route("experimental_tools")

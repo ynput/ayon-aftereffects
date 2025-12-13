@@ -7,6 +7,8 @@ import logging
 import pyblish
 from typing import Union
 
+from qtpy import QtCore, QtWidgets
+
 from ayon_core.pipeline.context_tools import get_current_task_entity
 
 from .ws_stub import get_stub
@@ -208,3 +210,16 @@ def publish_in_test(log, close_plugin_name=None):
                 close_plugin().process(context)
             except Exception as exp:
                 print(exp)
+
+
+def show_script_editor():
+    from ayon_core.tools.console_interpreter.ui import ConsoleInterpreterWindow
+
+    global widget
+    widget = ConsoleInterpreterWindow()
+    widget.setWindowTitle("Python Script Editor - AFX")
+    widget.setWindowFlags(widget.windowFlags() |
+                          QtCore.Qt.Dialog |
+                          QtCore.Qt.WindowMinimizeButtonHint)
+    widget.show()
+    widget.raise_()
