@@ -21,7 +21,7 @@ from ayon_core.tools.utils import host_tools, get_ayon_qt_app
 
 from .webserver import WebServerTool
 from .ws_stub import get_stub
-from .lib import set_settings, show_script_editor
+from .lib import set_settings
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -84,6 +84,21 @@ def show_tool_by_name(tool_name):
         kwargs["use_context"] = True
 
     host_tools.show_tool_by_name(tool_name, **kwargs)
+
+
+def show_script_editor():
+    from ayon_core.tools.console_interpreter.ui import ConsoleInterpreterWindow
+
+    # Global so it doesn't get garbage collected instantly
+    global console_window
+    console_window = ConsoleInterpreterWindow()
+    console_window.setWindowTitle("Python Script Editor - AFX")
+    console_window.setWindowFlags(
+        console_window.windowFlags() |
+        QtCore.Qt.Dialog |
+        QtCore.Qt.WindowMinimizeButtonHint)
+    console_window.show()
+    console_window.raise_()
 
 
 class ProcessLauncher(QtCore.QObject):
