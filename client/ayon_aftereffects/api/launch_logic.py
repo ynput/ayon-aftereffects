@@ -389,8 +389,7 @@ class AfterEffectsRoute(WebSocketRoute):
         self._settings_route(True, True)
 
     async def script_editor_route(self):
-        partial_method = functools.partial(show_script_editor)
-        ProcessLauncher.execute_in_main_thread(partial_method)
+        ProcessLauncher.execute_in_main_thread(show_script_editor)
 
         # Required return statement.
         return "nothing"
