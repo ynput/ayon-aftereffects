@@ -215,11 +215,12 @@ def publish_in_test(log, close_plugin_name=None):
 def show_script_editor():
     from ayon_core.tools.console_interpreter.ui import ConsoleInterpreterWindow
 
+    # Global so it doesn't get garbage collected instantly
     global console_window
     console_window = ConsoleInterpreterWindow()
     console_window.setWindowTitle("Python Script Editor - AFX")
     console_window.setWindowFlags(
-        widget.windowFlags() |
+        console_window.windowFlags() |
         QtCore.Qt.Dialog |
         QtCore.Qt.WindowMinimizeButtonHint)
     console_window.show()
