@@ -22,6 +22,7 @@ class RenderCreator(Creator):
     identifier = "render"
     label = "Render"
     product_type = "render"
+    product_base_type = "render"
     description = "Render creator"
     icon = "eye"
 
