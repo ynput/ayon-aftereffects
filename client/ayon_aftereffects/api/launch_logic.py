@@ -86,17 +86,20 @@ def show_tool_by_name(tool_name):
     host_tools.show_tool_by_name(tool_name, **kwargs)
 
 
+console_window = None
+
 def show_script_editor():
     from ayon_core.tools.console_interpreter.ui import ConsoleInterpreterWindow
 
     # Global so it doesn't get garbage collected instantly
     global console_window
-    console_window = ConsoleInterpreterWindow()
-    console_window.setWindowTitle("Python Script Editor - AFX")
-    console_window.setWindowFlags(
-        console_window.windowFlags() |
-        QtCore.Qt.Dialog |
-        QtCore.Qt.WindowMinimizeButtonHint)
+    if console_window is None:
+        console_window = ConsoleInterpreterWindow()
+        console_window.setWindowTitle("Python Script Editor - AFX")
+        console_window.setWindowFlags(
+            console_window.windowFlags() |
+            QtCore.Qt.Dialog |
+            QtCore.Qt.WindowMinimizeButtonHint)
     console_window.show()
     console_window.raise_()
 
