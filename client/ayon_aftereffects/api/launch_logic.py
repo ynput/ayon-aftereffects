@@ -27,6 +27,9 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 
+console_window = None
+
+
 def safe_excepthook(*args):
     traceback.print_exception(*args)
 
@@ -87,18 +90,22 @@ def show_tool_by_name(tool_name):
 
 
 def show_script_editor():
+    from ayon_core.tools.console_interpreter import InterpreterController
     from ayon_core.tools.console_interpreter.ui import ConsoleInterpreterWindow
 
     # Global so it doesn't get garbage collected instantly
     global console_window
-    console_window = ConsoleInterpreterWindow()
-    console_window.setWindowTitle("Python Script Editor - AFX")
-    console_window.setWindowFlags(
-        console_window.windowFlags() |
-        QtCore.Qt.Dialog |
-        QtCore.Qt.WindowMinimizeButtonHint)
+    if not console_window:
+        controller = InterpreterController(name="aftereffects")
+        console_window = ConsoleInterpreterWindow(controller)
+        console_window.setWindowTitle("Python Script Editor - AFX")
+        console_window.setWindowFlags(
+            console_window.windowFlags() |
+            QtCore.Qt.Dialog |
+            QtCore.Qt.WindowMinimizeButtonHint)
     console_window.show()
     console_window.raise_()
+    console_window.activateWindow()
 
 
 class ProcessLauncher(QtCore.QObject):
