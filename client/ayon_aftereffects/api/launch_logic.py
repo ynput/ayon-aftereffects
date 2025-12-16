@@ -95,7 +95,7 @@ def show_script_editor():
 
     # Global so it doesn't get garbage collected instantly
     global console_window
-    if not console_window:
+    if console_window is None:
         controller = InterpreterController(name="aftereffects")
         console_window = ConsoleInterpreterWindow(controller)
         console_window.setWindowTitle("Python Script Editor - AFX")
