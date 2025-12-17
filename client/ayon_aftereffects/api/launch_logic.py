@@ -96,7 +96,13 @@ def show_script_editor():
     # Global so it doesn't get garbage collected instantly
     global console_window
     if console_window is None:
-        controller = InterpreterController(name="aftereffects")
+        # Signature added in ayon-core 1.7.0
+        if is_func_signature_supported(
+            InterpreterController, name="aftereffects"
+        ):
+            controller = InterpreterController(name="aftereffects")
+        else:
+            controller = InterpreterController()
         console_window = ConsoleInterpreterWindow(controller)
         console_window.setWindowTitle("Python Script Editor - AFX")
         console_window.setWindowFlags(
