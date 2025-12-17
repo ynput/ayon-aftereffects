@@ -90,6 +90,7 @@ def show_tool_by_name(tool_name):
 
 
 def show_script_editor():
+    from ayon_core.lib import is_func_signature_supported
     from ayon_core.tools.console_interpreter import InterpreterController
     from ayon_core.tools.console_interpreter.ui import ConsoleInterpreterWindow
 
