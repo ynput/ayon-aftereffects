@@ -8,7 +8,10 @@ from ayon_core.pipeline import registered_host, OptionalPyblishPluginMixin
 from ayon_core.pipeline.publish import get_errored_plugins_from_context
 
 
-class IncrementWorkfile(pyblish.api.ContextPlugin, OptionalPyblishPluginMixin):
+class IncrementWorkfile(
+    pyblish.api.ContextPlugin,
+    OptionalPyblishPluginMixin
+):
     """Increment the current workfile.
 
     Saves the current scene with an increased version number.
