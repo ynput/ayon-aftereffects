@@ -27,6 +27,9 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 
+console_window = None
+
+
 def safe_excepthook(*args):
     traceback.print_exception(*args)
 
@@ -84,6 +87,32 @@ def show_tool_by_name(tool_name):
         kwargs["use_context"] = True
 
     host_tools.show_tool_by_name(tool_name, **kwargs)
+
+
+def show_script_editor():
+    from ayon_core.lib import is_func_signature_supported
+    from ayon_core.tools.console_interpreter import InterpreterController
+    from ayon_core.tools.console_interpreter.ui import ConsoleInterpreterWindow
+
+    # Global so it doesn't get garbage collected instantly
+    global console_window
+    if console_window is None:
+        # Signature added in ayon-core 1.7.0
+        if is_func_signature_supported(
+            InterpreterController, name="aftereffects"
+        ):
+            controller = InterpreterController(name="aftereffects")
+        else:
+            controller = InterpreterController()
+        console_window = ConsoleInterpreterWindow(controller)
+        console_window.setWindowTitle("Python Script Editor - AFX")
+        console_window.setWindowFlags(
+            console_window.windowFlags() |
+            QtCore.Qt.Dialog |
+            QtCore.Qt.WindowMinimizeButtonHint)
+    console_window.show()
+    console_window.raise_()
+    console_window.activateWindow()
 
 
 class ProcessLauncher(QtCore.QObject):
@@ -372,6 +401,12 @@ class AfterEffectsRoute(WebSocketRoute):
 
     async def setall_route(self):
         self._settings_route(True, True)
+
+    async def script_editor_route(self):
+        ProcessLauncher.execute_in_main_thread(show_script_editor)
+
+        # Required return statement.
+        return "nothing"
 
     async def experimental_tools_route(self):
         self._tool_route("experimental_tools")
