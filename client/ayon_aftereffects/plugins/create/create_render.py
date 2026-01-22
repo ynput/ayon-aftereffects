@@ -260,7 +260,9 @@ class RenderCreator(Creator):
         task_entity,
         variant,
         host_name,
-        instance
+        instance=None,
+        project_entity=None,
+        product_type=None,
     ):
         dynamic_data = {}
         if instance is not None:
