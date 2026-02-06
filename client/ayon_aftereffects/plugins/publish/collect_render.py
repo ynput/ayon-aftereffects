@@ -73,7 +73,7 @@ class CollectAERender(publish.AbstractCollectRender):
             product_type = inst.data["productType"]
             if not product_base_type:
                 product_base_type = product_type
-            if product_base_type not in ["render", "renderLocal"]:
+            if product_base_type != "render":
                 continue
 
             comp_id = int(inst.data["members"][0])
