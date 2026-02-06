@@ -99,7 +99,10 @@ class RenderCreator(Creator):
                 data["orig_comp_name"] = composition_name
 
             new_instance = CreatedInstance(
-                self.product_type, comp_product_name, data, self
+                self.product_base_type,
+                comp_product_name,
+                data,
+                self
             )
 
             api.get_stub().imprint(new_instance.id,
@@ -166,13 +169,14 @@ class RenderCreator(Creator):
 
     def collect_instances(self):
         for instance_data in cache_and_get_instances(self):
-            # legacy instances have product_type=='render' or 'renderLocal', use them
             creator_id = instance_data.get("creator_identifier")
             if not creator_id:
                 # NOTE this is for backwards compatibility but probably can be
                 #   removed
-                creator_id = instance_data.get("family", "")
-                creator_id = creator_id.replace("Local", "")
+                # - legacy family was 'render' or 'renderLocal'
+                family = instance_data.get("family", "").replace("Local", "")
+                if family == self.product_base_type:
+                    creator_id = self.identifier
 
             if creator_id == self.identifier:
                 instance_data = self._handle_legacy(instance_data)
@@ -290,7 +294,8 @@ class RenderCreator(Creator):
         if not instance_data.get("creator_attributes"):
             is_old_farm = instance_data.get("family") != "renderLocal"
             instance_data["creator_attributes"] = {"farm": is_old_farm}
-            instance_data["productType"] = self.product_type
+            instance_data["productBaseType"] = self.product_base_type
+            instance_data["productType"] = self.product_base_type
 
         if instance_data["creator_attributes"].get("mark_for_review") is None:
             instance_data["creator_attributes"]["mark_for_review"] = True
