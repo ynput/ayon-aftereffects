@@ -69,8 +69,11 @@ class CollectAERender(publish.AbstractCollectRender):
             if not inst.data.get("active", True):
                 continue
 
+            product_base_type = inst.data.get("productBaseType")
             product_type = inst.data["productType"]
-            if product_type not in ["render", "renderLocal"]:  # legacy
+            if not product_base_type:
+                product_base_type = product_type
+            if product_base_type != "render":
                 continue
 
             comp_id = int(inst.data["members"][0])
@@ -98,18 +101,26 @@ class CollectAERender(publish.AbstractCollectRender):
                     "No file extension set in Render Queue")
             render_item = render_q[0]
 
-            product_type = "render"
             instance_families = inst.data.get("families", [])
-            instance_families.append(product_type)
+            if product_base_type not in instance_families:
+                instance_families.append(product_base_type)
             product_name = inst.data["productName"]
-            instance = AERenderInstance(
+
+            kwargs = dict(
                 productType=product_type,
-                family=product_type,
+                productBaseType=product_base_type,
+            )
+            if "productBaseType" not in attr.fields_dict(AERenderInstance):
+                kwargs["productType"] = kwargs.pop("productBaseType")
+
+            instance = AERenderInstance(
+                **kwargs,
+                family=product_base_type,
                 families=instance_families,
                 version=version,
                 time="",
                 source=current_file,
-                label="{} - {}".format(product_name, product_type),
+                label=f"{product_name} - {product_base_type}",
                 productName=product_name,
                 folderPath=inst.data["folderPath"],
                 task=task_name,

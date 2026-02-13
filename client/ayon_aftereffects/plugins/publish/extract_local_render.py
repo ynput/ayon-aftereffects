@@ -10,7 +10,7 @@ class ExtractLocalRender(publish.Extractor):
     order = publish.Extractor.order - 0.47
     label = "Extract Local Render"
     hosts = ["aftereffects"]
-    families = ["renderLocal", "render.local"]
+    families = ["render.local"]
 
     def process(self, instance):
         stub = get_stub()
