@@ -888,7 +888,27 @@ function removeCompFromRenderQueue(comp_id) {
     return _prepareSingleValue(false);
 }
 
-function render(target_folder, comp_id){
+function addCompToRenderQueue(comp_id) {
+    /**
+     * Add composition to render queue if not already queued.
+     *
+     * Args:
+     *    comp_id (int): Project item id of composition.
+     * Returns:
+     *    (str): Prepared JSON response with boolean result.
+     */
+    var renderQueueItem = _getRenderQueueItem(comp_id)
+    if (renderQueueItem) {
+        return _prepareSingleValue(true);
+    }
+    comp = _getComp(comp_id)
+    if (comp && app.project.renderQueue.items.add(comp)) {
+        return _prepareSingleValue(true);
+    }
+    return _prepareSingleValue(false);
+}
+
+function render(target_folder, comp_id) {
     var out_dir = new Folder(target_folder);
     var out_dir = out_dir.fsName;
     for (i = 1; i <= app.project.renderQueue.numItems; ++i){
