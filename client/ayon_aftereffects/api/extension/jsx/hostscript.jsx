@@ -848,8 +848,8 @@ function addCompToRenderQueue(comp_id){
         }
     }
 
-    var newItem = app.project.renderQueue.items.add(comp);
-    return _prepareSingleValue(newItem.index);
+    app.project.renderQueue.items.add(comp);
+    return _prepareSingleValue(app.project.renderQueue.numItems);
 }
 
 function render(target_folder, comp_id){
