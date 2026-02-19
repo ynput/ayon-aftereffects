@@ -865,8 +865,9 @@ function _getRenderQueueItem(comp_id) {
 
     for (i = 1; i <= app.project.renderQueue.numItems; ++i) {
         var renderQueueItem = app.project.renderQueue.item(i);
-        if (renderQueueItem.comp && renderQueueItem.comp.id == comp_id) { }
-        return renderQueueItem;
+        if (renderQueueItem.comp && renderQueueItem.comp.id == comp_id) {
+            return renderQueueItem;
+        }
     }
     return undefined;
 }
