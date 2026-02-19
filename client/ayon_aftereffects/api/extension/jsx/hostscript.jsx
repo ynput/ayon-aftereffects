@@ -888,12 +888,52 @@ function removeCompFromRenderQueue(comp_id) {
     return _prepareSingleValue(false);
 }
 
-function addCompToRenderQueue(comp_id) {
+function _setOutputPath(comp_id, path) {
+    /**
+     * Set output directory and file name for all output modules of a comp.
+     *
+     * Uses render queue item for `comp_id` and updates each output module with:
+     * - `Base Path`: `path` if provided, otherwise `<project_path>/output`
+     * - `File Name`: decoded composition name
+     *
+     * Args:
+     *    comp_id (int): Project item id of composition.
+     *    path (str|undefined): Target output folder path.
+     * Returns:
+     *    (str): Prepared JSON response with boolean result.
+     */
+    var renderQueueItem = _getRenderQueueItem(comp_id)
+    const compName = renderQueueItem.comp.name;
+    const basePath = path ? path : "".concat(app.project.file.path, "/", "output");
+
+    for (i = 1; i <= renderQueueItem.numOutputModules; ++i) {
+        var om = renderQueueItem.outputModule(i);
+        var fileName = File.decode(compName);
+        var outputPath = new Folder(basePath);
+        if (!outputPath.exists) {
+            outputPath.create();
+        }
+        var localizedPath = outputPath.fsName;
+
+        var new_data = {
+            "Output File Info": {
+                "Base Path": localizedPath,
+                "File Name": fileName
+            }
+        };
+
+        om.setSettings(new_data);
+    }
+    return _prepareSingleValue(true);
+}
+
+function addCompToRenderQueue(comp_id, output_path) {
     /**
      * Add composition to render queue if not already queued.
      *
      * Args:
      *    comp_id (int): Project item id of composition.
+     *    output_path (str|undefined): Target output folder path.
      * Returns:
      *    (str): Prepared JSON response with boolean result.
      */
@@ -903,6 +943,7 @@ function addCompToRenderQueue(comp_id) {
     }
     comp = _getComp(comp_id)
     if (comp && app.project.renderQueue.items.add(comp)) {
+        _setOutputPath(comp_id, output_path);
         return _prepareSingleValue(true);
     }
     return _prepareSingleValue(false);
