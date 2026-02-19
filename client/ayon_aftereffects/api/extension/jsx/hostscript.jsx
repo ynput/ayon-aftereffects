@@ -835,6 +835,23 @@ function isFileSequence (item){
     return false;
 }
 
+function addCompToRenderQueue(comp_id){
+    var comp = app.project.itemByID(comp_id);
+    if (!(comp && (comp instanceof CompItem))){
+        return _prepareError("Composition with id '" + comp_id + "' was not found.");
+    }
+
+    for (i = 1; i <= app.project.renderQueue.numItems; ++i){
+        var rqItem = app.project.renderQueue.item(i);
+        if (rqItem.comp && rqItem.comp.id == comp_id){
+            return _prepareSingleValue(i);
+        }
+    }
+
+    var newItem = app.project.renderQueue.items.add(comp);
+    return _prepareSingleValue(newItem.index);
+}
+
 function render(target_folder, comp_id){
     var out_dir = new Folder(target_folder);
     var out_dir = out_dir.fsName;

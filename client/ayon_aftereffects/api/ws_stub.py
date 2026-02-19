@@ -609,6 +609,23 @@ class AfterEffectsServerStub():
 
         return self._handle_return(res)
 
+    def add_comp_to_render_queue(self, comp_id):
+        """Add a composition to render queue if it is not already queued.
+
+        Args:
+            comp_id: After Effects composition item id.
+
+        Returns:
+            Render queue item index.
+        """
+        res = self.websocketserver.call(
+            self.client.call(
+                "AfterEffects.add_comp_to_render_queue",
+                comp_id=comp_id
+            )
+        )
+        return self._handle_return(res)
+
     def render(self, folder_url, comp_id):
         """
             Render all renderqueueitem to 'folder_url'

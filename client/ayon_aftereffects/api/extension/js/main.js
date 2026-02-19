@@ -316,7 +316,16 @@ function main(websocket_url){
             log.warn("add_item_instead_placeholder: " + result);
             return result;
         });
-});
+   });
+  
+   RPC.addRoute('AfterEffects.add_comp_to_render_queue', function (data) {
+       log.warn('Server called client route "add_comp_to_render_queue":', data);
+       return runEvalScript("addCompToRenderQueue(" + data.comp_id + ")")
+           .then(function(result){
+               log.warn("add_comp_to_render_queue: " + result);
+               return result;
+           });
+   });
 
    RPC.addRoute('AfterEffects.render', function (data) {
     log.warn('Server called client route "render":', data);
