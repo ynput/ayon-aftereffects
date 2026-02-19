@@ -835,21 +835,57 @@ function isFileSequence (item){
     return false;
 }
 
-function addCompToRenderQueue(comp_id){
+function _getComp(comp_id) {
+    /**
+     * Return composition item by id.
+     *
+     * Args:
+     *    comp_id (int): Project item id of composition.
+     * Returns:
+     *    (CompItem|undefined): Matching composition or undefined.
+     */
     var comp = app.project.itemByID(comp_id);
-    if (!(comp && (comp instanceof CompItem))){
-        return _prepareError("Composition with id '" + comp_id + "' was not found.");
+    if (!(comp && (comp instanceof CompItem))) {
+        return undefined;
     }
+    return comp;
+}
 
-    for (i = 1; i <= app.project.renderQueue.numItems; ++i){
-        var rqItem = app.project.renderQueue.item(i);
-        if (rqItem.comp && rqItem.comp.id == comp_id){
-            return _prepareSingleValue(i);
-        }
+function _getRenderQueueItem(comp_id) {
+    /**
+     * Return render queue item for a composition id.
+     *
+     * Args:
+     *    comp_id (int): Project item id of composition.
+     * Returns:
+     *    (RenderQueueItem|undefined): Matching render queue item or undefined.
+     */
+    if (!_getComp(comp_id))
+        return undefined;
+
+    for (i = 1; i <= app.project.renderQueue.numItems; ++i) {
+        var renderQueueItem = app.project.renderQueue.item(i);
+        if (renderQueueItem.comp && renderQueueItem.comp.id == comp_id) { }
+        return renderQueueItem;
     }
+    return undefined;
+}
 
-    app.project.renderQueue.items.add(comp);
-    return _prepareSingleValue(app.project.renderQueue.numItems);
+function removeCompFromRenderQueue(comp_id) {
+    /**
+     * Remove a composition from render queue if present.
+     *
+     * Args:
+     *    comp_id (int): Project item id of composition.
+     * Returns:
+     *    (str): Prepared JSON response with boolean result.
+     */
+    var renderQueueItem = _getRenderQueueItem(comp_id)
+    if (renderQueueItem) {
+        renderQueueItem.remove();
+        return _prepareSingleValue(true);
+    }
+    return _prepareSingleValue(false);
 }
 
 function render(target_folder, comp_id){
