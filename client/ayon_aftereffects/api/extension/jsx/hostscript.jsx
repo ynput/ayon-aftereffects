@@ -905,7 +905,15 @@ function _setOutputPath(comp_id, path) {
      */
     var renderQueueItem = _getRenderQueueItem(comp_id)
     var compName = renderQueueItem.comp.name;
-    var basePath = path ? path : "".concat(app.project.file.path, "/", "output");
+    var basePath;
+    if (path) {
+        basePath = path;
+    } else if (app.project && app.project.file && app.project.file.path) {
+        basePath = "".concat(app.project.file.path, "/", "output");
+    } else {
+        // Fallback for unsaved projects: use a safe, writable location
+        basePath = "".concat(Folder.myDocuments.fsName, "/", "output");
+    }
 
     for (i = 1; i <= renderQueueItem.numOutputModules; ++i) {
         var om = renderQueueItem.outputModule(i);
