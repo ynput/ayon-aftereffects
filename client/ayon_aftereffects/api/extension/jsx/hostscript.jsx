@@ -904,8 +904,8 @@ function _setOutputPath(comp_id, path) {
      *    (str): Prepared JSON response with boolean result.
      */
     var renderQueueItem = _getRenderQueueItem(comp_id)
-    const compName = renderQueueItem.comp.name;
-    const basePath = path ? path : "".concat(app.project.file.path, "/", "output");
+    var compName = renderQueueItem.comp.name;
+    var basePath = path ? path : "".concat(app.project.file.path, "/", "output");
 
     for (i = 1; i <= renderQueueItem.numOutputModules; ++i) {
         var om = renderQueueItem.outputModule(i);
