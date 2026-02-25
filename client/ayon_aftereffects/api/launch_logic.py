@@ -6,6 +6,7 @@ import logging
 import asyncio
 import functools
 import traceback
+import runpy
 
 from wsrpc_aiohttp import (
     WebSocketRoute,
@@ -49,6 +50,9 @@ def main(*subprocess_args):
 
     launcher = ProcessLauncher(subprocess_args)
     launcher.start()
+
+    if _queue_custom_script(launcher):
+        sys.exit(app.exec_())
 
     env_workfiles_on_launch = os.getenv(
         "AYON_AFTEREFFECTS_WORKFILES_ON_LAUNCH",
@@ -113,6 +117,94 @@ def show_script_editor():
     console_window.show()
     console_window.raise_()
     console_window.activateWindow()
+
+
+def _system_exit_code(exc):
+    """Convert SystemExit to integer exit code."""
+    if exc.code is None:
+        return 0
+    if isinstance(exc.code, int):
+        return exc.code
+    return 1
+
+
+def _run_custom_script():
+    """Run custom launch script payload in-process."""
+    script_path = os.getenv("AYON_AFTEREFFECTS_SCRIPT_PATH")
+    if not script_path:
+        return
+
+    normalized_script_path = os.path.normpath(script_path)
+    if not os.path.isfile(normalized_script_path):
+        raise FileNotFoundError(
+            f"After Effects script not found: {normalized_script_path}"
+        )
+
+    script_args = os.getenv("AYON_AFTEREFFECTS_SCRIPT_ARGS")
+    original_argv = list(sys.argv)
+    argv = [normalized_script_path]
+    if script_args:
+        argv.append(script_args)
+
+    log.info(
+        f"Running After Effects control script in-process: {normalized_script_path}"
+    )
+
+    sys.argv = argv
+    try:
+        runpy.run_path(normalized_script_path, run_name="__main__")
+    except SystemExit as exc:
+        exit_code = _system_exit_code(exc)
+        if exit_code:
+            raise RuntimeError(
+                f"After Effects control script exited with code {exc.code}"
+            ) from exc
+    finally:
+        sys.argv = original_argv
+
+
+def _queue_custom_script(launcher):
+    """Queue custom startup script if configured."""
+    if not os.getenv("AYON_AFTEREFFECTS_SCRIPT_PATH"):
+        return False
+
+    auto_exit = env_value_to_bool("AYON_AFTEREFFECTS_SCRIPT_AUTO_EXIT")
+    log.info(f"Custom script mode enabled. AUTO_EXIT={auto_exit}")
+
+    def _callback():
+        exit_code = 0
+        try:
+            _run_custom_script()
+        except Exception:
+            log.warning("After Effects control script failed", exc_info=True)
+            exit_code = 1
+        finally:
+            if auto_exit or exit_code:
+                launcher.shutdown(exit_code=exit_code, request_client_close=True)
+
+    launcher.execute_in_main_thread(_callback)
+    return True
+
+
+def _request_host_close():
+    """Ask connected AE client to close gracefully.
+
+    Returns:
+        bool: True if close command was sent, False otherwise.
+    """
+    try:
+        stub = get_stub()
+    except Exception:
+        log.warning("Could not get AE websocket stub for auto-exit.", exc_info=True)
+        return False
+
+    try:
+        stub.close()
+        log.info("Sent AfterEffects.close to host client.")
+        return True
+    except Exception:
+        log.warning("Failed to send AfterEffects.close to host client.", exc_info=True)
+        return False
 
 
 class ProcessLauncher(QtCore.QObject):
@@ -192,19 +284,58 @@ class ProcessLauncher(QtCore.QObject):
 
     def exit(self):
         """ Exit whole application. """
+        self.shutdown(exit_code=0, request_client_close=False)
+
+    def shutdown(self, exit_code=0, request_client_close=False):
+        """Stop launcher resources and quit Qt app with exit code."""
         if self._start_process_timer.isActive():
             self._start_process_timer.stop()
         if self._loop_timer.isActive():
             self._loop_timer.stop()
 
+        close_sent = False
+        if request_client_close:
+            close_sent = _request_host_close()
+
         if self._websocket_server is not None:
             self._websocket_server.stop()
 
-        if self._process:
-            self._process.kill()
-            self._process.wait()
+        if close_sent and self._process and self._process.poll() is None:
+            self._process.wait(timeout=10)
 
-        QtCore.QCoreApplication.exit()
+        if self._process and self._process.poll() is None:
+            if request_client_close and not close_sent:
+                self.log.warning(
+                    "Auto-exit requested but close RPC was not sent; "
+                    "falling back to host process termination."
+                )
+            self._terminate_host_process()
+
+        QtCore.QCoreApplication.exit(exit_code)
+
+    def _terminate_host_process(self, graceful_timeout=5):
+        """Terminate host process and its children as a last resort."""
+        if not self._process or self._process.poll() is not None:
+            return
+
+        self._process.terminate()
+        self._process.wait(timeout=graceful_timeout)
+
+        if self._process.poll() is not None:
+            return
+
+        if sys.platform == "win32":
+            subprocess.run(
+                ["taskkill", "/PID", str(self._process.pid), "/T", "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            self._process.wait(timeout=graceful_timeout)
+
+        if self._process.poll() is None:
+            self._process.kill()
+            self._process.wait(timeout=graceful_timeout)
 
     def _on_loop_timer(self):
         # TODO find better way and catch errors
