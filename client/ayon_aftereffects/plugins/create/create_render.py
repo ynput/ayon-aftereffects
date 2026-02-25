@@ -8,6 +8,7 @@ from ayon_core.pipeline import (
 )
 from ayon_core.lib import prepare_template_data
 from ayon_core.pipeline.create import PRODUCT_NAME_ALLOWED_SYMBOLS
+
 from ayon_aftereffects import api
 from ayon_aftereffects.api.pipeline import cache_and_get_instances
 from ayon_aftereffects.api.lib import set_settings
@@ -21,10 +22,11 @@ class RenderCreator(Creator):
     """
     identifier = "render"
     label = "Render"
-    product_type = "render"
     product_base_type = "render"
+    product_type = product_base_type
     description = "Render creator"
     icon = "eye"
+    settings_category = "aftereffects"
 
     create_allow_context_change = True
 
@@ -98,11 +100,15 @@ class RenderCreator(Creator):
             if self.rename_comp_to_product_name:
                 data["orig_comp_name"] = composition_name
 
+            product_type = data.get("productType")
+            if not product_type:
+                product_type = self.product_base_type
             new_instance = CreatedInstance(
-                self.product_base_type,
-                comp_product_name,
-                data,
-                self
+                product_base_type=self.product_base_type,
+                product_type=product_type,
+                product_name=comp_product_name,
+                data=data,
+                creator=self,
             )
 
             api.get_stub().imprint(new_instance.id,
