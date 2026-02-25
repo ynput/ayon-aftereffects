@@ -218,23 +218,6 @@ class RenderCreator(Creator):
                     api.get_stub().rename_item(comp_id,
                                                new_comp_name)
 
-    def apply_settings(self, project_settings):
-        plugin_settings = (
-            project_settings["aftereffects"]["create"]["RenderCreator"]
-        )
-
-        self.mark_for_review = plugin_settings["mark_for_review"]
-        self.default_variants = plugin_settings.get(
-            "default_variants",
-            plugin_settings.get("defaults") or []
-        )
-        self.rename_comp_to_product_name = plugin_settings.get(
-            "rename_comp_to_product_name", self.rename_comp_to_product_name
-        )
-        self.force_setting_values = plugin_settings.get(
-            "force_setting_values", self.force_setting_values
-        )
-
     def get_detail_description(self):
         return """Creator for Render instances
 
