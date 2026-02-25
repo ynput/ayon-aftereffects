@@ -19,6 +19,7 @@ class FileLoader(api.AfterEffectsLoader):
         "prerender",
         "review",
         "audio",
+        "workfile",
     }
     representations = {"*"}
 
