@@ -37,7 +37,7 @@ class AEWorkfileCreator(AutoCreator):
     def create(self, options=None):
         existing_instance = None
         for instance in self.create_context.instances:
-            if instance.product_type == self.product_type:
+            if instance.creator_identifier == self.identifier:
                 existing_instance = instance
                 break
 
