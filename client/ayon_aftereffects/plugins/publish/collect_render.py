@@ -106,15 +106,9 @@ class CollectAERender(publish.AbstractCollectRender):
                 instance_families.append(product_base_type)
             product_name = inst.data["productName"]
 
-            kwargs = dict(
+            instance = AERenderInstance(
                 productType=product_type,
                 productBaseType=product_base_type,
-            )
-            if "productBaseType" not in attr.fields_dict(AERenderInstance):
-                kwargs["productType"] = kwargs.pop("productBaseType")
-
-            instance = AERenderInstance(
-                **kwargs,
                 family=product_base_type,
                 families=instance_families,
                 version=version,
