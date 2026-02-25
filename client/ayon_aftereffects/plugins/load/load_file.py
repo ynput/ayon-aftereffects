@@ -12,7 +12,7 @@ class FileLoader(api.AfterEffectsLoader):
     """
     label = "Load file"
 
-    product_types = {
+    product_base_types = {
         "image",
         "plate",
         "render",
@@ -20,6 +20,7 @@ class FileLoader(api.AfterEffectsLoader):
         "review",
         "audio",
     }
+    product_types = product_base_types
     representations = {"*"}
 
     def load(self, context, name=None, namespace=None, data=None):
