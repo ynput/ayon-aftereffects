@@ -6,7 +6,7 @@ from ayon_aftereffects import api
 
 
 class FileLoader(api.AfterEffectsLoader):
-    """Load images
+    """Load images and full AE workfiles.
 
     Stores the imported product version in a container named after the folder.
     """
@@ -19,6 +19,7 @@ class FileLoader(api.AfterEffectsLoader):
         "prerender",
         "review",
         "audio",
+        "workfile",
     }
     representations = {"*"}
 
