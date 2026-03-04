@@ -136,6 +136,11 @@ class RenderCreator(Creator):
                     comp_ids=[comp.id],
                     print_msg=False,
                     entity=entity)
+            self._ensure_comp_in_render_queue(
+                stub=stub,
+                comp_id=comp.id,
+                comp_name=comp_product_name
+            )
 
     def get_pre_create_attr_defs(self):
         output = [
@@ -172,6 +177,31 @@ class RenderCreator(Creator):
                 default=False
             )
         ]
+
+    def _ensure_comp_in_render_queue(
+        self, stub: object, comp_id: int, comp_name: str
+    ) -> None:
+        """Ensure composition is present in After Effects render queue.
+
+        Args:
+            stub (object): Connected After Effects server stub.
+            comp_id (int): Composition item id in After Effects.
+            comp_name (str): Composition/product name for readable errors.
+
+        Raises:
+            CreatorError: When composition cannot be queued.
+        """
+        try:
+            queued = stub.add_comp_to_render_queue(comp_id)
+        except ValueError as exc:
+            raise CreatorError(
+                f"Failed to add '{comp_name}' to render queue: {exc}"
+            ) from exc
+
+        if not queued:
+            raise CreatorError(
+                f"Failed to add '{comp_name}' to render queue."
+            )
 
     def collect_instances(self):
         for instance_data in cache_and_get_instances(self):

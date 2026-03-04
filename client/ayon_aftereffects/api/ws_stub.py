@@ -609,6 +609,41 @@ class AfterEffectsServerStub():
 
         return self._handle_return(res)
 
+    def add_comp_to_render_queue(self, comp_id, output_path=None):
+        """Add a composition to render queue if it is not already queued.
+
+        Args:
+            comp_id: After Effects composition item id.
+            output_path: Optional output directory path.
+
+        Returns:
+            bool: True when composition is in render queue.
+        """
+        res = self.websocketserver.call(
+            self.client.call(
+                "AfterEffects.add_comp_to_render_queue",
+                comp_id=comp_id,
+                output_path=output_path,
+            )
+        )
+        return self._handle_return(res)
+
+    def remove_comp_from_render_queue(self, comp_id):
+        """Remove a composition from render queue.
+
+        Args:
+            comp_id: After Effects composition item id.
+
+        Returns:
+            bool: True when composition was removed.
+        """
+        res = self.websocketserver.call(
+            self.client.call(
+                "AfterEffects.remove_comp_from_render_queue", comp_id=comp_id
+            )
+        )
+        return self._handle_return(res)
+
     def render(self, folder_url, comp_id):
         """
             Render all renderqueueitem to 'folder_url'
