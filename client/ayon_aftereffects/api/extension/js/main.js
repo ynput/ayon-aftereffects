@@ -83,6 +83,16 @@ function main(websocket_url){
                 return result;
             });
     });
+    
+    RPC.addRoute('AfterEffects.run_jsx_file', function (data) {
+        log.warn('Server called client route "run_jsx_file":', data);
+        var escapedPath = EscapeStringForJSX(data.path);
+        return runEvalScript("runJsxFile('" + escapedPath + "')")
+            .then(function(result){
+                log.warn("run_jsx_file: " + result);
+                return result;
+            });
+    });
 
     RPC.addRoute('AfterEffects.get_metadata', function (data) {
         log.warn('Server called client route "get_metadata":', data);

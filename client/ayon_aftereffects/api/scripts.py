@@ -166,22 +166,13 @@ class ScriptService:
             else:
                 log.info(f"Script {item.name} ran successfully.")
 
-    def run_manual_script(self, script_id: str) -> ScriptRunResult:
-        """Run a single manually configured script.
-
+    def run_item(self, item: ScriptItem) -> ScriptRunResult:
+        """Run a resolved script item directly.
         Args:
-            script_id: Stable script identifier.
-
+            item: Already-resolved script item (e.g. from list_manual_items).
         Returns:
             Script execution result.
         """
-        item = self._find_item(script_id, auto=False)
-        if item is None:
-            return ScriptRunResult(
-                script_id=script_id,
-                success=False,
-                message="Script item was not found.",
-            )
         return self._run_item(item)
 
     def _find_item(

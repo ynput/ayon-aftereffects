@@ -22,13 +22,13 @@ from ayon_core.lib import (
 )
 from ayon_core.pipeline import install_host
 from ayon_core.addon import AddonsManager
-from ayon_core.tools.utils import host_tools, get_ayon_qt_app
+from ayon_core.tools.utils import get_ayon_qt_app
 
 from ayon_aftereffects.api import ae_host_tools
 
 from .webserver import WebServerTool
 from .ws_stub import get_stub
-from .lib import set_settings
+from .lib import raise_window_to_front, set_settings
 
 log = Logger.get_logger(__name__)
 
@@ -81,7 +81,7 @@ def main(*subprocess_args):
             save = True
 
         launcher.execute_in_main_thread(
-            lambda: host_tools.show_tool_by_name("workfiles", save=save)
+            lambda: ae_host_tools.show_tool_by_name("workfiles", save=save)
         )
 
     sys.exit(app.exec_())
@@ -92,7 +92,7 @@ def show_tool_by_name(tool_name):
     if tool_name == "loader":
         kwargs["use_context"] = True
 
-    host_tools.show_tool_by_name(tool_name, **kwargs)
+    ae_host_tools.show_tool_by_name(tool_name, **kwargs)
 
 
 def show_script_editor():
@@ -116,9 +116,7 @@ def show_script_editor():
             console_window.windowFlags() |
             QtCore.Qt.Dialog |
             QtCore.Qt.WindowMinimizeButtonHint)
-    console_window.show()
-    console_window.raise_()
-    console_window.activateWindow()
+    raise_window_to_front(console_window)
 
 
 class ProcessLauncher(QtCore.QObject):
@@ -182,7 +180,6 @@ class ProcessLauncher(QtCore.QObject):
             return False
 
         try:
-
             _stub = get_stub()
             if _stub:
                 return True
@@ -437,6 +434,14 @@ class AfterEffectsRoute(WebSocketRoute):
 
     async def script_editor_route(self):
         ProcessLauncher.execute_in_main_thread(show_script_editor)
+
+        # Required return statement.
+        return "nothing"
+
+    async def run_scripts_route(self):
+        ProcessLauncher.execute_in_main_thread(
+            ae_host_tools.show_run_scripts_tool
+        )
 
         # Required return statement.
         return "nothing"

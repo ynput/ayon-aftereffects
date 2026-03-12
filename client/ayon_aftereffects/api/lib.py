@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 import re
+import sys
 import json
 import contextlib
 import pyblish
@@ -12,6 +13,36 @@ from ayon_core.lib import Logger
 from .ws_stub import get_stub
 
 log = Logger.get_logger(__name__)
+
+
+def raise_window_to_front(window):
+    """Raise a Qt window to the foreground.
+    On Windows, activateWindow() is silently ignored when the calling
+    process does not own the foreground (e.g. when triggered via the
+    CEP panel). AttachThreadInput temporarily borrows the foreground
+    thread's input state so SetForegroundWindow succeeds even on the
+    first call, before Python has ever received focus.
+    Args:
+        window (QtWidgets.QWidget): Window to bring to the front.
+    """
+    window.show()
+    window.raise_()
+    window.activateWindow()
+    if sys.platform == "win32":
+        import ctypes
+        user32 = ctypes.windll.user32
+        hwnd = int(window.winId())
+        foreground_hwnd = user32.GetForegroundWindow()
+        foreground_tid = user32.GetWindowThreadProcessId(
+            foreground_hwnd, None
+        )
+        current_tid = ctypes.windll.kernel32.GetCurrentThreadId()
+        if foreground_tid and foreground_tid != current_tid:
+            user32.AttachThreadInput(current_tid, foreground_tid, True)
+            user32.SetForegroundWindow(hwnd)
+            user32.AttachThreadInput(current_tid, foreground_tid, False)
+        else:
+            user32.SetForegroundWindow(hwnd)
 
 
 @contextlib.contextmanager
