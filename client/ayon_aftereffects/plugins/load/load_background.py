@@ -19,7 +19,8 @@ class BackgroundLoader(api.AfterEffectsLoader):
     label = "Load JSON Background"
     product_base_types = {"background"}
     product_types = product_base_types
-    representations = {"json"}
+    representations = {"*"}
+    extensions = {"json"}
 
     def load(self, context, name=None, namespace=None, data=None):
         stub = self.get_stub()
