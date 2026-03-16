@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="8.0" ExtensionBundleId="io.ynput.AE.panel" ExtensionBundleVersion="1.1.2"
+<ExtensionManifest Version="8.0" ExtensionBundleId="io.ynput.AE.panel" ExtensionBundleVersion="1.1.3"
 		ExtensionBundleName="io.ynput.AE.panel" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<ExtensionList>
 		<Extension Id="io.ynput.AE.panel" Version="1.0" />
