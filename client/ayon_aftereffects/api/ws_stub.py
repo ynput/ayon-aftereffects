@@ -131,6 +131,20 @@ class AfterEffectsServerStub():
 
         self.log.debug(f"Couldn't find layer metadata for item: {item}")
 
+    def run_jsx_file(self, path: str):
+        """Execute a JSX file in the connected After Effects instance.
+
+        Args:
+            path: Absolute path to a JSX file.
+
+        Returns:
+            Parsed response from AE.
+        """
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.run_jsx_file", path=path
+        )
+        return self._handle_return(res)
+
     def imprint(self, item_id, data, all_items=None, items_meta=None):
         """
             Save item metadata to Label field of metadata of active document

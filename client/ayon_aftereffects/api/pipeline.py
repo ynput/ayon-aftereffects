@@ -24,6 +24,7 @@ from ayon_core.tools.utils import get_ayon_qt_app
 from ayon_aftereffects import AFTEREFFECTS_ADDON_ROOT
 
 from .launch_logic import get_stub
+from .scripts import run_scripts
 from .ws_stub import ConnectionNotEstablishedYet
 
 log = Logger.get_logger(__name__)
@@ -72,7 +73,8 @@ class AfterEffectsHost(HostBase, IWorkfileHost, ILoadHost, IPublishHost):
         register_creator_plugin_path(CREATE_PATH)
         register_workfile_build_plugin_path(WORKFILE_BUILD_PATH)
 
-        register_event_callback("application.launched", application_launch)
+        register_event_callback("application.launched", on_application_launch)
+        register_event_callback("workfile.opened", on_workfile_opened)
 
     def get_workfile_extensions(self):
         return [".aep"]
@@ -169,7 +171,15 @@ class AfterEffectsHost(HostBase, IWorkfileHost, ILoadHost, IPublishHost):
                                  item.name.replace(stub.PUBLISH_ICON, ''))
 
 
-def application_launch():
+def on_workfile_opened():
+    """Run automatic scripts after a workfile was opened."""
+    try:
+        run_scripts(auto=True)
+    except Exception:
+        log.exception("Automatic script execution failed.")
+
+
+def on_application_launch():
     """Triggered after start of app"""
     check_inventory()
 
