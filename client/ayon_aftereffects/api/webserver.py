@@ -109,7 +109,7 @@ class WebServerTool:
             result = con.connect_ex((host_name, port)) == 0
 
         if result:
-            log.warn(f"Port {port} is already in use")
+            log.warning(f"Port {port} is already in use")
         return result
 
     def call_on_client(self, stub, method_name, **kwargs):
