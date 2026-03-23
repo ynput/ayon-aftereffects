@@ -6,7 +6,6 @@ import json
 import logging
 
 import attr
-
 from wsrpc_aiohttp import WebSocketAsync
 
 from .webserver import WebServerTool
@@ -48,30 +47,39 @@ class AfterEffectsServerStub():
 
     Expects that client is already connected (started when AYON menu is opened)
 
-    'self.websocketserver.call' is used as async wrapper
+    'self.websocketserver.call_on_client' is used as async wrapper
     """
     PUBLISH_ICON = '\u2117 '
     LOADED_ICON = '\u25bc'
 
     def __init__(self):
         self.websocketserver = WebServerTool.get_instance()
-        self.client = self.get_client()
         self.log = logging.getLogger(self.__class__.__name__)
+
+    @property
+    def client(self):
+        """Current connected WebSocket client.
+
+        Resolved on each access so retries use a reconnected client
+        after the CEP extension reconnects.
+        """
+        return self.get_client()
 
     @staticmethod
     def get_client():
         """
-            Return first connected client to WebSocket
+            Return first connected client to WebSocket whose transport is not
+            closing/closed. Skips stale entries so retries use a reconnected client.
             TODO implement selection by Route
-        :return: <WebSocketAsync> client
+        :return: <WebSocketAsync> client or None
         """
         clients = WebSocketAsync.get_clients()
-        client = None
-        if len(clients) > 0:
-            key = list(clients.keys())[0]
-            client = clients.get(key)
-
-        return client
+        for client in clients.values():
+            sock = getattr(client, "socket", None)
+            if sock is not None and getattr(sock, "closed", False):
+                continue
+            return client
+        return None
 
     def open(self, path):
         """
@@ -80,8 +88,8 @@ class AfterEffectsServerStub():
             path(string): file path locally
         Returns: None
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.open', path=path))
+        res = self.websocketserver.call_on_client(self,
+                                        "AfterEffects.open", path=path)
 
         return self._handle_return(res)
 
@@ -96,8 +104,8 @@ class AfterEffectsServerStub():
         Returns:
             (list)
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.get_metadata'))
+        res = self.websocketserver.call_on_client(self,
+                                        "AfterEffects.get_metadata")
         metadata = self._handle_return(res)
 
         return metadata or []
@@ -176,9 +184,9 @@ class AfterEffectsServerStub():
 
         payload = json.dumps(cleaned_data, indent=4)
 
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.imprint',
-                                         payload=payload))
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.imprint", payload=payload
+        )
         return self._handle_return(res)
 
     def get_active_document_full_name(self):
@@ -186,8 +194,9 @@ class AfterEffectsServerStub():
             Returns absolute path of active document via ws call
         Returns(string): file name
         """
-        res = self.websocketserver.call(self.client.call(
-            'AfterEffects.get_active_document_full_name'))
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.get_active_document_full_name"
+        )
 
         return self._handle_return(res)
 
@@ -196,8 +205,9 @@ class AfterEffectsServerStub():
             Returns just a name of active document via ws call
         Returns(string): file name
         """
-        res = self.websocketserver.call(self.client.call(
-            'AfterEffects.get_active_document_name'))
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.get_active_document_name"
+        )
 
         return self._handle_return(res)
 
@@ -218,12 +228,13 @@ class AfterEffectsServerStub():
         Returns:
             (list) of namedtuples
         """
-        res = self.websocketserver.call(
-            self.client.call('AfterEffects.get_items',
-                             comps=comps,
-                             folders=folders,
-                             footages=footages)
-              )
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.get_items",
+            comps=comps,
+            folders=folders,
+            footages=footages,
+        )
         return self._to_records(self._handle_return(res))
 
     def select_items(self, items):
@@ -232,9 +243,9 @@ class AfterEffectsServerStub():
         Args:
             items (list): of int item ids
         """
-        self.websocketserver.call(
-            self.client.call('AfterEffects.select_items', items=items))
-
+        self.websocketserver.call_on_client(
+            self, "AfterEffects.select_items", items=items
+        )
 
     def get_selected_items(self, comps, folders=False, footages=False):
         """
@@ -248,12 +259,13 @@ class AfterEffectsServerStub():
             (list) of namedtuples
 
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.get_selected_items',
-                                         comps=comps,
-                                         folders=folders,
-                                         footages=footages)
-                                        )
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.get_selected_items",
+            comps=comps,
+            folders=folders,
+            footages=footages,
+        )
         return self._to_records(self._handle_return(res))
 
     def add_item(self, name, item_type):
@@ -264,10 +276,9 @@ class AfterEffectsServerStub():
                 name (str)
                 item_type (str): COMP|FOLDER
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.add_item',
-                                         name=name,
-                                         item_type=item_type))
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.add_item", name=name, item_type=item_type
+        )
 
         return self._handle_return(res)
 
@@ -294,12 +305,13 @@ class AfterEffectsServerStub():
                 config
 
         """
-        res = self.websocketserver.call(
-            self.client.call('AfterEffects.import_file',
-                             path=path,
-                             item_name=item_name,
-                             import_options=import_options)
-            )
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.import_file",
+            path=path,
+            item_name=item_name,
+            import_options=import_options,
+        )
         records = self._to_records(self._handle_return(res))
         if records:
             return records.pop()
@@ -313,10 +325,13 @@ class AfterEffectsServerStub():
                 item_name (string): label on item in Project list
 
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.replace_item',
-                                         item_id=item_id,
-                                         path=path, item_name=item_name))
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.replace_item",
+            item_id=item_id,
+            path=path,
+            item_name=item_name,
+        )
 
         return self._handle_return(res)
 
@@ -328,10 +343,12 @@ class AfterEffectsServerStub():
                 item_name (string): label on item in Project list
 
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.rename_item',
-                                         item_id=item_id,
-                                         item_name=item_name))
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.rename_item",
+            item_id=item_id,
+            item_name=item_name,
+        )
 
         return self._handle_return(res)
 
@@ -341,9 +358,9 @@ class AfterEffectsServerStub():
                 item_id (int):
 
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.delete_item',
-                                         item_id=item_id))
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.delete_item", item_id=item_id
+        )
 
         return self._handle_return(res)
 
@@ -368,9 +385,9 @@ class AfterEffectsServerStub():
                 cleaned_data.append(instance)
 
         payload = json.dumps(cleaned_data, indent=4)
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.imprint',
-                                         payload=payload))
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.imprint", payload=payload
+        )
 
         return self._handle_return(res)
 
@@ -386,10 +403,12 @@ class AfterEffectsServerStub():
             item_id (int):
             color_idx (int): 0-16 Label colors from AE Project view
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.set_label_color',
-                                         item_id=item_id,
-                                         color_idx=color_idx))
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.set_label_color",
+            item_id=item_id,
+            color_idx=color_idx,
+        )
 
         return self._handle_return(res)
 
@@ -405,17 +424,17 @@ class AfterEffectsServerStub():
                 (AEItem)
 
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.get_comp_properties',
-                                         item_id=comp_id
-                                         ))
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.get_comp_properties", item_id=comp_id
+        )
 
         records = self._to_records(self._handle_return(res))
         if records:
             return records.pop()
 
-    def set_comp_properties(self, comp_id, start, duration, frame_rate,
-                            width, height):
+    def set_comp_properties(
+        self, comp_id, start, duration, frame_rate, width, height
+    ):
         """
             Set work area to predefined values (from Ftrack).
             Work area directs what gets rendered.
@@ -429,14 +448,16 @@ class AfterEffectsServerStub():
             width (int): resolution width
             height (int): resolution height
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.set_comp_properties',
-                                         item_id=comp_id,
-                                         start=start,
-                                         duration=duration,
-                                         frame_rate=frame_rate,
-                                         width=width,
-                                         height=height))
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.set_comp_properties",
+            item_id=comp_id,
+            start=start,
+            duration=duration,
+            frame_rate=frame_rate,
+            width=width,
+            height=height,
+        )
         return self._handle_return(res)
 
     def save(self):
@@ -444,8 +465,7 @@ class AfterEffectsServerStub():
             Saves active document
         Returns: None
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.save'))
+        res = self.websocketserver.call_on_client(self, "AfterEffects.save")
 
         return self._handle_return(res)
 
@@ -457,10 +477,12 @@ class AfterEffectsServerStub():
             as_copy: <boolean>
         Returns: None
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.saveAs',
-                                         image_path=project_path,
-                                         as_copy=as_copy))
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.saveAs",
+            image_path=project_path,
+            as_copy=as_copy,
+        )
 
         return self._handle_return(res)
 
@@ -470,9 +492,9 @@ class AfterEffectsServerStub():
             Returns:
                (list) of (AEItem): with 'file_name' field
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.get_render_info',
-                                         comp_id=comp_id))
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.get_render_info", comp_id=comp_id
+        )
 
         records = self._to_records(self._handle_return(res))
         return records
@@ -485,9 +507,9 @@ class AfterEffectsServerStub():
             Returns:
                 (str): absolute path url
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.get_audio_url',
-                                         item_id=item_id))
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.get_audio_url", item_id=item_id
+        )
 
         return self._handle_return(res)
 
@@ -513,11 +535,13 @@ class AfterEffectsServerStub():
             Returns:
                 (AEItem): object with id of created folder, all imported images
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.import_background',
-                                         comp_id=comp_id,
-                                         comp_name=comp_name,
-                                         files=files))
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.import_background",
+            comp_id=comp_id,
+            comp_name=comp_name,
+            files=files,
+        )
 
         records = self._to_records(self._handle_return(res))
         if records:
@@ -539,11 +563,13 @@ class AfterEffectsServerStub():
             Returns:
                 (AEItem): object with id of created folder, all imported images
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.reload_background',
-                                         comp_id=comp_id,
-                                         comp_name=comp_name,
-                                         files=files))
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.reload_background",
+            comp_id=comp_id,
+            comp_name=comp_name,
+            files=files,
+        )
 
         records = self._to_records(self._handle_return(res))
         if records:
@@ -559,10 +585,12 @@ class AfterEffectsServerStub():
                 item_id (int): FootageItem.id
                 comp already found previously
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.add_item_as_layer',
-                                         comp_id=comp_id,
-                                         item_id=item_id))
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.add_item_as_layer",
+            comp_id=comp_id,
+            item_id=item_id,
+        )
 
         records = self._to_records(self._handle_return(res))
         if records:
@@ -578,10 +606,12 @@ class AfterEffectsServerStub():
                 placeholder_item_id (int): id of placeholder item
                 item_id (int): loaded FootageItem id
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.add_item_instead_placeholder',  # noqa
-                                         placeholder_item_id=placeholder_item_id,  # noqa
-                                         item_id=item_id))
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.add_item_instead_placeholder",  # noqa
+            placeholder_item_id=placeholder_item_id,  # noqa
+            item_id=item_id,
+        )
 
         return self._handle_return(res)
 
@@ -599,13 +629,15 @@ class AfterEffectsServerStub():
                 fps (float)
                 duration (int)
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.add_placeholder',
-                                         name=name,
-                                         width=width,
-                                         height=height,
-                                         fps=fps,
-                                         duration=duration))
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.add_placeholder",
+            name=name,
+            width=width,
+            height=height,
+            fps=fps,
+            duration=duration,
+        )
 
         return self._handle_return(res)
 
@@ -619,12 +651,11 @@ class AfterEffectsServerStub():
         Returns:
             bool: True when composition is in render queue.
         """
-        res = self.websocketserver.call(
-            self.client.call(
-                "AfterEffects.add_comp_to_render_queue",
-                comp_id=comp_id,
-                output_path=output_path,
-            )
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.add_comp_to_render_queue",
+            comp_id=comp_id,
+            output_path=output_path,
         )
         return self._handle_return(res)
 
@@ -637,10 +668,8 @@ class AfterEffectsServerStub():
         Returns:
             bool: True when composition was removed.
         """
-        res = self.websocketserver.call(
-            self.client.call(
-                "AfterEffects.remove_comp_from_render_queue", comp_id=comp_id
-            )
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.remove_comp_from_render_queue", comp_id=comp_id
         )
         return self._handle_return(res)
 
@@ -651,36 +680,37 @@ class AfterEffectsServerStub():
             folder_url(string): local folder path for collecting
         Returns: None
         """
-        res = self.websocketserver.call(self.client.call
-                                        ('AfterEffects.render',
-                                         folder_url=folder_url,
-                                         comp_id=comp_id))
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.render", folder_url=folder_url, comp_id=comp_id
+        )
         return self._handle_return(res)
 
     def get_extension_version(self):
         """Returns version number of installed extension."""
-        res = self.websocketserver.call(self.client.call(
-            'AfterEffects.get_extension_version'))
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.get_extension_version"
+        )
 
         return self._handle_return(res)
 
     def get_app_version(self):
         """Returns version number of installed application (17.5...)."""
-        res = self.websocketserver.call(self.client.call(
-            'AfterEffects.get_app_version'))
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.get_app_version"
+        )
 
         return self._handle_return(res)
 
     def close(self):
-        res = self.websocketserver.call(self.client.call('AfterEffects.close'))
+        res = self.websocketserver.call_on_client(self, "AfterEffects.close")
 
         return self._handle_return(res)
 
     def print_msg(self, msg):
         """Triggers Javascript alert dialog."""
-        self.websocketserver.call(self.client.call
-                                  ('AfterEffects.print_msg',
-                                   msg=msg))
+        self.websocketserver.call_on_client(
+            self, "AfterEffects.print_msg", msg=msg
+        )
 
     def _handle_return(self, res):
         """Wraps return, throws ValueError if 'error' key is present."""

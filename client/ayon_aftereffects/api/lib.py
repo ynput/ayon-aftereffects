@@ -3,16 +3,15 @@ import os
 import re
 import json
 import contextlib
-import logging
 import pyblish
 from typing import Union
 
 from ayon_core.pipeline.context_tools import get_current_task_entity
+from ayon_core.lib import Logger
 
 from .ws_stub import get_stub
 
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log = Logger.get_logger(__name__)
 
 
 @contextlib.contextmanager
@@ -207,4 +206,4 @@ def publish_in_test(log, close_plugin_name=None):
             try:
                 close_plugin().process(context)
             except Exception as exp:
-                print(exp)
+                log.error(exp)

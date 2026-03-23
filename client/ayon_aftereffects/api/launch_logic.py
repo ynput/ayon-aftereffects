@@ -2,7 +2,6 @@ import os
 import sys
 import subprocess
 import collections
-import logging
 import asyncio
 import functools
 import traceback
@@ -14,17 +13,22 @@ from wsrpc_aiohttp import (
 
 from qtpy import QtCore
 
-from ayon_core.lib import Logger, is_in_tests, env_value_to_bool
+from ayon_core.lib import (
+    Logger,
+    is_in_tests,
+    env_value_to_bool,
+    register_event_callback
+)
 from ayon_core.pipeline import install_host
 from ayon_core.addon import AddonsManager
 from ayon_core.tools.utils import host_tools, get_ayon_qt_app
+from ayon_core.lib
 
 from .webserver import WebServerTool
 from .ws_stub import get_stub
 from .lib import set_settings
 
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log = Logger.get_logger(__name__)
 
 
 console_window = None
@@ -144,6 +148,11 @@ class ProcessLauncher(QtCore.QObject):
         self._start_process_timer = start_process_timer
         self._loop_timer = loop_timer
 
+        register_event_callback(
+            "application.close",
+            lambda: ProcessLauncher.execute_in_main_thread(self.exit),
+        )
+
     @property
     def log(self):
         if self._log is None:
@@ -245,6 +254,7 @@ class ProcessLauncher(QtCore.QObject):
         # Wait until host is connected
         if self.is_host_connected:
             self._start_process_timer.stop()
+            emit_event("application.launched")
             self._loop_timer.start()
         elif (
             not self.is_process_running
@@ -274,7 +284,7 @@ class ProcessLauncher(QtCore.QObject):
         websocket_server.add_route("*", "/ws/", WebSocketAsync)
         # Add after effects route to websocket handler
 
-        print("Adding {} route".format(self.route_name))
+        self.log.info("Adding {} route".format(self.route_name))
         WebSocketAsync.add_route(
             self.route_name, AfterEffectsRoute
         )
