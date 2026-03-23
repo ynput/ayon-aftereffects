@@ -18,13 +18,15 @@ from ayon_core.lib import (
     is_in_tests,
     env_value_to_bool,
     register_event_callback,
-    emit_event,
+    emit_event
 )
 import ayon_api
 from ayon_core.pipeline import install_host
 from ayon_core.addon import AddonsManager
 from ayon_core.tools.utils import get_ayon_qt_app
 from ayon_core.pipeline.context_tools import get_current_context
+
+from ayon_aftereffects.api import ae_host_tools
 
 from ayon_aftereffects.api import ae_host_tools
 
@@ -196,6 +198,7 @@ class ProcessLauncher(QtCore.QObject):
 
         self._process = None
         self._websocket_server = None
+        self._auto_scripts_pending = False
 
         start_process_timer = QtCore.QTimer()
         start_process_timer.setInterval(100)
@@ -284,6 +287,15 @@ class ProcessLauncher(QtCore.QObject):
                 callback = cls._main_thread_callbacks.popleft()
                 callback()
 
+        if self._auto_scripts_pending:
+            try:
+                result = get_stub().get_active_document_full_name()
+                if result and result not in ["null", ""]:
+                    self._auto_scripts_pending = False
+                    emit_event("workfile.opened")
+            except Exception:
+                pass  # not connected yet, retry next tick
+
         if not self.is_process_running:
             self.log.info("Host process is not running. Closing")
             self.exit()
@@ -314,6 +326,12 @@ class ProcessLauncher(QtCore.QObject):
         # Wait until host is connected
         if self.is_host_connected:
             self._start_process_timer.stop()
+            emit_event("application.launched")
+            if any(
+                str(arg).endswith(".aep")
+                for arg in self._subprocess_args
+            ):
+                self._auto_scripts_pending = True
             self._loop_timer.start()
         elif (
             not self.is_process_running
