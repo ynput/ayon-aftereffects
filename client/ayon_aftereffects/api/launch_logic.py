@@ -263,7 +263,6 @@ class ProcessLauncher(QtCore.QObject):
         # Wait until host is connected
         if self.is_host_connected:
             self._start_process_timer.stop()
-            emit_event("application.launched")
             if any(
                 str(arg).endswith(".aep")
                 for arg in self._subprocess_args
