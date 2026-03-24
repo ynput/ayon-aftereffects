@@ -8,16 +8,18 @@ its launch, waits for connection from DCC and handles communication going
 forward. Server is closed before Python process is killed.
 """
 
-import asyncio
 import os
-import socket
-import threading
-import time
 import urllib
+import time
+import threading
+import asyncio
+import socket
 
 from aiohttp import web
+
+from wsrpc_aiohttp import WSRPCClient, WebSocketAsync
+
 from ayon_core.pipeline import get_global_context
-from wsrpc_aiohttp import WebSocketAsync, WSRPCClient
 from ayon_core.lib import Logger
 
 log = Logger.get_logger(__name__)
