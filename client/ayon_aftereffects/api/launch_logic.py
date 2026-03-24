@@ -17,12 +17,12 @@ from ayon_core.lib import (
     Logger,
     is_in_tests,
     env_value_to_bool,
-    register_event_callback
+    register_event_callback,
+    emit_event,
 )
 from ayon_core.pipeline import install_host
 from ayon_core.addon import AddonsManager
 from ayon_core.tools.utils import host_tools, get_ayon_qt_app
-from ayon_core.lib
 
 from .webserver import WebServerTool
 from .ws_stub import get_stub
@@ -130,7 +130,7 @@ class ProcessLauncher(QtCore.QObject):
 
         super(ProcessLauncher, self).__init__()
 
-        # Keep track if launcher was alreadu started
+        # Keep track if launcher was already started
         self._started = False
 
         self._process = None
