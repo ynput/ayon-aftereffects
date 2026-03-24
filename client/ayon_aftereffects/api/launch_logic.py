@@ -254,7 +254,6 @@ class ProcessLauncher(QtCore.QObject):
         # Wait until host is connected
         if self.is_host_connected:
             self._start_process_timer.stop()
-            emit_event("application.launched")
             self._loop_timer.start()
         elif (
             not self.is_process_running
@@ -353,6 +352,7 @@ class AfterEffectsRoute(WebSocketRoute):
             notification after long running job on the server or similar
     """
     instance = None
+    _application_launched_emitted = False
 
     def init(self, **kwargs):
         # Python __init__ must be return "self".
@@ -364,6 +364,11 @@ class AfterEffectsRoute(WebSocketRoute):
     # server functions
     async def ping(self):
         log.debug("someone called AfterEffects route ping")
+        if not AfterEffectsRoute._application_launched_emitted:
+            AfterEffectsRoute._application_launched_emitted = True
+            ProcessLauncher.execute_in_main_thread(
+                lambda: emit_event("application.launched")
+            )
 
     # This method calls function on the client side
     # client functions
