@@ -20,9 +20,11 @@ from ayon_core.lib import (
     register_event_callback,
     emit_event
 )
+import ayon_api
 from ayon_core.pipeline import install_host
 from ayon_core.addon import AddonsManager
 from ayon_core.tools.utils import get_ayon_qt_app
+from ayon_core.pipeline.context_tools import get_current_context
 
 from ayon_aftereffects.api import ae_host_tools
 
@@ -40,6 +42,55 @@ def safe_excepthook(*args):
     traceback.print_exception(*args)
 
 
+def _emit_workfile_open_for_launch(host):
+    """Emit workfile.opened for a AEP file opened natively via CLI arg.
+
+    Args:
+        host (AfterEffectsHost): The registered host instance.
+    """
+    filepath = host.get_current_workfile()
+    if not filepath:
+        log.debug(
+            "No workfile detected after launch, "
+            "skipping workfile.opened event."
+        )
+        return
+    context = get_current_context()
+    project_name = context.get("project_name")
+    folder_path = context.get("folder_path")
+    task_name = context.get("task_name")
+    if not all([project_name, folder_path, task_name]):
+        log.warning(
+            "Incomplete context for workfile.opened event: "
+            "project=%s, folder=%s, task=%s",
+            project_name, folder_path, task_name,
+        )
+        return
+    folder_entity = ayon_api.get_folder_by_path(project_name, folder_path)
+    if not folder_entity:
+        log.warning(
+            "Could not find folder entity for path '%s'", folder_path
+        )
+        return
+    task_entity = ayon_api.get_task_by_name(
+        project_name, folder_entity["id"], task_name
+    )
+    if not task_entity:
+        log.warning(
+            "Could not find task entity '%s'", task_name
+        )
+        return
+    event_data = host._get_workfile_event_data(
+        project_name, folder_entity, task_entity, filepath
+    )
+    # Set AYON_WORKDIR to match the behaviour of open_workfile_with_context
+    os.environ["AYON_WORKDIR"] = event_data["workdir_path"]
+    host._emit_workfile_open_event(event_data, after_open=True)
+    log.info(
+        "Emitted workfile.opened for launcher-opened file: %s", filepath
+    )
+
+
 def main(*subprocess_args):
     """Main entrypoint to AE launching, called from pre hook."""
     sys.excepthook = safe_excepthook
@@ -55,6 +106,16 @@ def main(*subprocess_args):
 
     launcher = ProcessLauncher(subprocess_args)
     launcher.start()
+
+    # If a workfile path was passed as a launch argument, AE opens
+    # it natively via CLI, bypassing open_workfile_with_context().
+    # Queue emission of the workfile.opened event for after the
+    # host connects (callbacks are processed once the loop timer
+    # starts, which only happens after host connection is confirmed).
+    if len(subprocess_args) > 1 and os.path.exists(subprocess_args[-1]):
+        launcher.execute_in_main_thread(
+            functools.partial(_emit_workfile_open_for_launch, host)
+        )
 
     env_workfiles_on_launch = os.getenv(
         "AYON_AFTEREFFECTS_WORKFILES_ON_LAUNCH",
@@ -135,7 +196,6 @@ class ProcessLauncher(QtCore.QObject):
 
         self._process = None
         self._websocket_server = None
-        self._auto_scripts_pending = False
 
         start_process_timer = QtCore.QTimer()
         start_process_timer.setInterval(100)
@@ -224,15 +284,6 @@ class ProcessLauncher(QtCore.QObject):
                 callback = cls._main_thread_callbacks.popleft()
                 callback()
 
-        if self._auto_scripts_pending:
-            try:
-                result = get_stub().get_active_document_full_name()
-                if result and result not in ["null", ""]:
-                    self._auto_scripts_pending = False
-                    emit_event("workfile.opened")
-            except Exception:
-                pass  # not connected yet, retry next tick
-
         if not self.is_process_running:
             self.log.info("Host process is not running. Closing")
             self.exit()
@@ -263,11 +314,6 @@ class ProcessLauncher(QtCore.QObject):
         # Wait until host is connected
         if self.is_host_connected:
             self._start_process_timer.stop()
-            if any(
-                str(arg).endswith(".aep")
-                for arg in self._subprocess_args
-            ):
-                self._auto_scripts_pending = True
             self._loop_timer.start()
         elif (
             not self.is_process_running

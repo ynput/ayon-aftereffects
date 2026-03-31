@@ -5,6 +5,11 @@ indent: 4, maxerr: 50 */
 
 var csInterface = new CSInterface();
 
+// Signal to the startup JSX that the panel loaded successfully.
+// The JSX reads this flag on next launch to skip executeCommand when
+// the workspace has already restored the panel.
+csInterface.evalScript('app.preferences.savePrefAsBool("AYON", "panelOpen", true)');
+
 log.warn("script start");
 
 WSRPC.DEBUG = false;

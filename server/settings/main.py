@@ -19,6 +19,13 @@ class AfterEffectsSettings(BaseSettingsModel):
         title="Install AYON Extension",
         description="Triggers pre-launch hook which installs extension."
     )
+    auto_open_panel: bool = SettingsField(
+        True,
+        title="Auto-open AYON Panel",
+        description=(
+            "Automatically open the AYON panel on every After Effects launch."
+        ),
+    )
 
     imageio: AfterEffectsImageIOModel = SettingsField(
         default_factory=AfterEffectsImageIOModel, title="OCIO config"
@@ -44,6 +51,7 @@ class AfterEffectsSettings(BaseSettingsModel):
 
 DEFAULT_AFTEREFFECTS_SETTING = {
     "auto_install_extension": True,
+    "auto_open_panel": True,
     "create": {
         "RenderCreator": {
             "mark_for_review": True,
