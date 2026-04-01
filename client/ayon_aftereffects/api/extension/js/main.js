@@ -6,8 +6,9 @@ indent: 4, maxerr: 50 */
 var csInterface = new CSInterface();
 
 // Signal to the startup JSX that the panel loaded successfully.
-// The JSX reads this flag on next launch to skip executeCommand when
-// the workspace has already restored the panel.
+// open_ayon_panel.jsx resets this flag to false at the start of each
+// launch, then polls until it sees true (workspace restored the panel)
+// or times out and opens the panel via executeCommand.
 csInterface.evalScript('app.preferences.savePrefAsBool("AYON", "panelOpen", true)');
 
 log.warn("script start");
