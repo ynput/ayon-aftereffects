@@ -18,7 +18,7 @@ from ayon_core.lib import (
     is_in_tests,
     env_value_to_bool,
     register_event_callback,
-    emit_event
+    emit_event,
 )
 import ayon_api
 from ayon_core.pipeline import install_host
