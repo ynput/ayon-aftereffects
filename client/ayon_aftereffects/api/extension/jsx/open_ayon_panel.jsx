@@ -15,12 +15,15 @@ app.preferences.savePrefAsBool("AYON", "panelOpen", false);
 //            If the timeout expires → call executeCommand to open the panel.
 var _ayon_phase = 1;
 var _ayon_attempts = 0;
+var _ayon_command_id = -1;
 
 function _ayon_open_panel() {
-    var id = app.findMenuCommandId("AYON");
+    if (_ayon_command_id < 0) {
+        _ayon_command_id = app.findMenuCommandId("AYON");
+    }
 
     if (_ayon_phase === 1) {
-        if (id > 0) {
+        if (_ayon_command_id > 0) {
             _ayon_phase = 2;
             _ayon_attempts = 0;
             app.scheduleTask("_ayon_open_panel()", 1000, false);
@@ -31,14 +34,14 @@ function _ayon_open_panel() {
         return;
     }
 
-    // Phase 2: wait for main.js to signal that the panel loaded.
     var isOpen = false;
     try {
         isOpen = app.preferences.getPrefAsBool("AYON", "panelOpen");
-    } catch (e) {}
+    } catch (e) {
+        // Preference absent on first launch — treat as false.
+    }
 
     if (isOpen) {
-        // Workspace restored the panel — nothing to do.
         return;
     }
 
@@ -46,8 +49,7 @@ function _ayon_open_panel() {
         _ayon_attempts++;
         app.scheduleTask("_ayon_open_panel()", 1000, false);
     } else {
-        // Panel was not restored after 5 seconds — open it.
-        app.executeCommand(id);
+        app.executeCommand(_ayon_command_id);
     }
 }
 

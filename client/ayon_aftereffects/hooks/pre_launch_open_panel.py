@@ -10,9 +10,9 @@ from ayon_aftereffects import AFTEREFFECTS_ADDON_ROOT
 class OpenPanelOnFirstLaunch(PreLaunchHook):
     """Deploy a JSX to AE's Scripts/Startup folder to auto-open the panel.
 
-    The extension ships with AutoVisible=false so the panel is always
-    closed at AE startup. The deployed JSX calls executeCommand to open
-    it, which is always an open operation (never a toggle).
+    The deployed JSX polls until CEP registers the AYON menu command,
+    then waits to see if the workspace restores the panel automatically.
+    If it does not within 5 seconds, it calls executeCommand to open it.
     """
 
     app_groups = {"aftereffects"}
@@ -45,12 +45,11 @@ class OpenPanelOnFirstLaunch(PreLaunchHook):
             script_name
         )
 
+        script_content = source.read_text(encoding="utf-8")
         for startup_dir in startup_dirs:
             startup_dir.mkdir(parents=True, exist_ok=True)
             target = startup_dir / script_name
-            target.write_text(
-                source.read_text(encoding="utf-8"), encoding="utf-8"
-            )
+            target.write_text(script_content, encoding="utf-8")
             self.log.info("Panel startup script deployed to: %s", target)
 
     def _get_startup_dirs(self, exe_path: str) -> "list[Path]":
