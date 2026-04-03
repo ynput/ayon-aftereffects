@@ -71,13 +71,13 @@ class OpenPanelOnFirstLaunch(PreLaunchHook):
         system = platform.system().lower()
         if system == "darwin":
             base = (
-                Path.home() / "Library/Preferences/Adobe/After Effects"
+                Path.home() / 'Library/Preferences/Adobe/After Effects'
             )
         elif system == "windows":
             appdata = os.environ.get("APPDATA", "")
             if not appdata:
                 return []
-            base = Path(appdata) / "Adobe/After Effects"
+            base = Path(appdata) / 'Adobe/After Effects'
         else:
             return []
 
