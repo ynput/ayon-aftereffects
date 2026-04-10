@@ -68,6 +68,12 @@ function main(websocket_url){
 
     log.warn("connected");
 
+    RPC.call('AfterEffects.ping').then(function (data) {
+        log.warn('Result for calling server route "ping": ', data);
+    }, function (error) {
+        log.warn(error);
+    });
+
     RPC.addRoute('AfterEffects.open', function (data) {
         log.warn('Server called client route "open":', data);
         var escapedPath = EscapeStringForJSX(data.path);

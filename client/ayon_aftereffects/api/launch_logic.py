@@ -2,7 +2,6 @@ import os
 import sys
 import subprocess
 import collections
-import logging
 import asyncio
 import functools
 import traceback
@@ -14,7 +13,13 @@ from wsrpc_aiohttp import (
 
 from qtpy import QtCore
 
-from ayon_core.lib import Logger, is_in_tests, env_value_to_bool
+from ayon_core.lib import (
+    Logger,
+    is_in_tests,
+    env_value_to_bool,
+    register_event_callback,
+    emit_event,
+)
 from ayon_core.pipeline import install_host
 from ayon_core.addon import AddonsManager
 from ayon_core.tools.utils import host_tools, get_ayon_qt_app
@@ -23,8 +28,7 @@ from .webserver import WebServerTool
 from .ws_stub import get_stub
 from .lib import set_settings
 
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log = Logger.get_logger(__name__)
 
 
 console_window = None
@@ -126,7 +130,7 @@ class ProcessLauncher(QtCore.QObject):
 
         super(ProcessLauncher, self).__init__()
 
-        # Keep track if launcher was alreadu started
+        # Keep track if launcher was already started
         self._started = False
 
         self._process = None
@@ -143,6 +147,11 @@ class ProcessLauncher(QtCore.QObject):
 
         self._start_process_timer = start_process_timer
         self._loop_timer = loop_timer
+
+        register_event_callback(
+            "application.close",
+            lambda: ProcessLauncher.execute_in_main_thread(self.exit),
+        )
 
     @property
     def log(self):
@@ -274,7 +283,7 @@ class ProcessLauncher(QtCore.QObject):
         websocket_server.add_route("*", "/ws/", WebSocketAsync)
         # Add after effects route to websocket handler
 
-        print("Adding {} route".format(self.route_name))
+        self.log.info("Adding {} route".format(self.route_name))
         WebSocketAsync.add_route(
             self.route_name, AfterEffectsRoute
         )
@@ -343,6 +352,7 @@ class AfterEffectsRoute(WebSocketRoute):
             notification after long running job on the server or similar
     """
     instance = None
+    _application_launched_emitted = False
 
     def init(self, **kwargs):
         # Python __init__ must be return "self".
@@ -354,6 +364,11 @@ class AfterEffectsRoute(WebSocketRoute):
     # server functions
     async def ping(self):
         log.debug("someone called AfterEffects route ping")
+        if not AfterEffectsRoute._application_launched_emitted:
+            AfterEffectsRoute._application_launched_emitted = True
+            ProcessLauncher.execute_in_main_thread(
+                lambda: emit_event("application.launched")
+            )
 
     # This method calls function on the client side
     # client functions

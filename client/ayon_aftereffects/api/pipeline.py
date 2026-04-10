@@ -56,14 +56,14 @@ class AfterEffectsHost(HostBase, IWorkfileHost, ILoadHost, IPublishHost):
         try:
             stub = get_stub()  # only after Photoshop is up
         except ConnectionNotEstablishedYet:
-            print("Not connected yet, ignoring")
+            log.debug("Not connected yet, ignoring")
             return
 
         self._stub = stub
         return self._stub
 
     def install(self):
-        print("Installing AYON After Effects integration...")
+        log.info("Installing AYON After Effects integration...")
 
         pyblish.api.register_host("aftereffects")
         pyblish.api.register_plugin_path(PUBLISH_PATH)
@@ -91,7 +91,7 @@ class AfterEffectsHost(HostBase, IWorkfileHost, ILoadHost, IPublishHost):
             if full_name and full_name != "null":
                 return os.path.normpath(full_name).replace("\\", "/")
         except ValueError:
-            print("Nothing opened")
+            log.debug("Nothing opened")
             pass
 
         return None
@@ -192,7 +192,7 @@ def ls():
     try:
         stub = get_stub()  # only after AfterEffects is up
     except ConnectionNotEstablishedYet:
-        print("Not connected yet, ignoring")
+        log.warning("Not connected yet, ignoring")
         return
 
     layers_meta = stub.get_metadata()
