@@ -423,7 +423,8 @@ function getCompProperties(comp_id){
         "framesDuration": comp.duration * comp.frameRate,
         "frameRate": comp.frameRate,
         "width": comp.width,
-        "height": comp.height});
+        "height": comp.height,
+        "pixelAspect": comp.pixelAspect});
 }
 
 function setCompProperties(comp_id, frameStart, framesCount, frameRate,
