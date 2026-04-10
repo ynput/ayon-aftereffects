@@ -35,6 +35,7 @@ class AEItem(object):
     instance_id = attr.ib(default=None)  # New Publisher
     width = attr.ib(default=None)
     height = attr.ib(default=None)
+    pixelAspect = attr.ib(default=1)
     is_placeholder = attr.ib(default=False)
     uuid = attr.ib(default=False)
     path = attr.ib(default=False)  # path to FootageItem to validate
@@ -787,6 +788,7 @@ class AfterEffectsServerStub():
                           d.get("instance_id"),
                           d.get("width"),
                           d.get("height"),
+                          d.get("pixelAspect", 1),
                           d.get("is_placeholder"),
                           d.get("uuid"),
                           d.get("path"),
