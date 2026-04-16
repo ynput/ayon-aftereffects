@@ -23,7 +23,9 @@ class OpenPanelOnFirstLaunch(PreLaunchHook):
         try:
             settings = self.data["project_settings"]["aftereffects"]
             enabled = bool(settings["auto_open_panel"])
-            self.launch_context.env["AYON_AUTO_OPEN_PANEL"] = str(enabled)
+            self.launch_context.env["AYON_AUTO_OPEN_PANEL"] = (
+                "true" if enabled else "false"
+            )
             if enabled:
                 self._inner_execute()
         except Exception:
