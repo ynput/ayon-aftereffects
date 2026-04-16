@@ -89,8 +89,11 @@ class ScriptService:
                 resolved_path = raw_path
                 error = "Script path is empty."
             else:
-                resolved_path = self.resolve_path(raw_path)
-                if not self._has_supported_extension(resolved_path):
+                template_result, resolved_path = self.resolve_path(raw_path)
+                if not template_result.solved:
+                    missing = ", ".join(sorted(template_result.missing_keys))
+                    error = f"Unresolved template variables: {missing}"
+                elif not self._has_supported_extension(resolved_path):
                     error = "Only .js and .jsx files are supported."
                 elif not os.path.isfile(resolved_path):
                     error = "Script file does not exist."
@@ -130,14 +133,15 @@ class ScriptService:
             item.path for item in self.list_items(auto=auto) if item.exists
         ]
 
-    def resolve_path(self, path: str) -> str:
+    def resolve_path(self, path: str) -> tuple:
         """Resolve a templated script path against current AYON context.
 
         Args:
             path: Raw configured path.
 
         Returns:
-            Resolved path.
+            Tuple of (TemplateResult, resolved path string). When the template
+            is not fully solved, the second element is the original raw path.
         """
         template_data = get_current_context_template_data()
         template_data.update(os.environ)
@@ -148,10 +152,10 @@ class ScriptService:
 
         result = StringTemplate.format_template(path, template_data)
         if result.solved:
-            path = result.normalized()
-            return anatomy.path_remapper(path)
+            resolved = anatomy.path_remapper(result.normalized())
+            return result, resolved
 
-        return path
+        return result, path
 
     def run_scripts(self, auto: bool = True) -> None:
         """Run all valid scripts for the requested mode.
@@ -279,9 +283,10 @@ def resolve_path(path: str) -> str:
         path: Raw configured path.
 
     Returns:
-        Resolved path.
+        Resolved path, or the original path if resolution failed.
     """
-    return get_script_service().resolve_path(path)
+    _result, resolved = get_script_service().resolve_path(path)
+    return resolved
 
 
 def run_scripts(auto: bool = True) -> None:
