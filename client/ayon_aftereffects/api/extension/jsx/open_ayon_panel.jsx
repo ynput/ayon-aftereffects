@@ -4,7 +4,7 @@
 // respects the current AYON_AUTO_OPEN_PANEL env var set by the pre-launch
 // hook — even if the setting was disabled after the file was first installed.
 (function () {
-    if (Boolean($.getenv("AYON_AUTO_OPEN_PANEL")) === false) { return; }
+    if ($.getenv("AYON_AUTO_OPEN_PANEL") !== "true") { return; }
 
     // Reset the flag synchronously here — Scripts/Startup JSX runs during AE
     // initialization, before the CEP framework loads and before main.js can
