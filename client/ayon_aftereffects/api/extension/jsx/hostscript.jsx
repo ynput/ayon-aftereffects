@@ -22,6 +22,28 @@ function sayHello(){
     alert("hello from ExtendScript");
 }
 
+function runJsxFile(path){
+    /**
+     * Execute an external JSX file in current AE session.
+     *
+     * Args:
+     *     path (string): Absolute path to jsx.
+     */
+    var jsxFile = new File(path);
+    if (!jsxFile.exists){
+        return _prepareError("JSX file not found: " + path);
+    }
+
+    try{
+        var result = $.evalFile(jsxFile);
+        return _prepareSingleValue(result);
+    } catch (error) {
+        return _prepareError(
+            "Failed to execute JSX file: " + error.toString()
+        );
+    }
+}
+
 function getEnv(variable){
     return $.getenv(variable);
 }
