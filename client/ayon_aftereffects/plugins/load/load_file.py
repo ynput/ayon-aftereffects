@@ -1,7 +1,5 @@
 import re
-import os
 
-from ayon_core.pipeline import get_representation_path
 from ayon_aftereffects import api
 
 
@@ -24,7 +22,7 @@ class FileLoader(api.AfterEffectsLoader):
     product_types = product_base_types
     representations = {"*"}
 
-    def load(self, context, name=None, namespace=None, data=None):
+    def load(self, context, name=None, namespace=None, options=None):
         stub = self.get_stub()
         loaded_item_name = f"{context['folder']['name']}_{name}"
         footages = stub.get_items(comps=False, footages=True, folders=False)
@@ -92,10 +90,8 @@ class FileLoader(api.AfterEffectsLoader):
             )
         else:  # switching version - keep same name
             loaded_item_name = container["namespace"]
-        path = get_representation_path(repre_entity)
+        path = self.filepath_from_context(context)
 
-        if len(repre_entity["files"]) > 1:
-           path = os.path.dirname(path)
         stub.replace_item(item.id, path, stub.LOADED_ICON + loaded_item_name)
         stub.imprint(
             item.id,
@@ -105,4 +101,3 @@ class FileLoader(api.AfterEffectsLoader):
                 "namespace": loaded_item_name
             }
         )
-
