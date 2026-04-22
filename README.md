@@ -54,6 +54,9 @@ ZXPSignCmd -selfSignedCert NA NA Ayon Avalon-After-Effects Ayon extension.p12
 ZXPSignCmd -sign {path to addon}/api/extension {path to addon}/api/extension.zxp extension.p12 Ayon
 ```
 
+!!! Always bump up `ExtensionBundleVersion` in `https://github.com/ynput/ayon-aftereffects/blob/develop/client/ayon_aftereffects/api/extension/CSXS/manifest.xml` and build `.zxp` file.
+(Without it auto-install won't work.)
+
 ### Plugin Examples
 
 Expected deployed extension location on default Windows:
