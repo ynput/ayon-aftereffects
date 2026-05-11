@@ -542,12 +542,24 @@ function getRenderInfo(comp_id){
             }
 
             if (render_item.status == RQItemStatus.DONE){
+                // AE's duplicate() resets Output Module config to user defaults
+                // (mp4/H.264), losing format/codec set by the artist.
+                // Capture STRING_SETTABLE settings here, re-apply to duplicate.
+                var stored_om_settings = [];
                 for (j = 1; j<= render_item.numOutputModules; ++j){
                     var item = render_item.outputModule(j);
                     original_file_names.push(item.file);
+                    stored_om_settings.push(
+                        item.getSettings(GetSettingsFormat.STRING_SETTABLE)
+                    );
                 }
-                render_item.duplicate();  // create new, cannot change status if DONE
+                var new_item = render_item.duplicate();
                 render_item.remove();  // remove existing to limit duplications
+                for (j = 1; j<= new_item.numOutputModules; ++j){
+                    new_item.outputModule(j).setSettings(
+                        stored_om_settings[j-1]
+                    );
+                }
                 continue;
             }
         }
@@ -989,8 +1001,23 @@ function render(target_folder, comp_id) {
         var composition = render_item.comp;
         if (composition.id == comp_id){
             if (render_item.status == RQItemStatus.DONE){
+                // Preserve Output Module config across duplicate() — AE
+                // otherwise resets format/codec to user defaults.
+                var stored_om_settings = [];
+                for (var k = 1; k <= render_item.numOutputModules; ++k){
+                    stored_om_settings.push(
+                        render_item.outputModule(k).getSettings(
+                            GetSettingsFormat.STRING_SETTABLE
+                        )
+                    );
+                }
                 var new_item = render_item.duplicate();
                 render_item.remove();
+                for (var k = 1; k <= new_item.numOutputModules; ++k){
+                    new_item.outputModule(k).setSettings(
+                        stored_om_settings[k-1]
+                    );
+                }
                 render_item = new_item;
             }
 
@@ -998,8 +1025,6 @@ function render(target_folder, comp_id) {
 
             var om1 = app.project.renderQueue.item(i).outputModule(1);
             var file_name = File.decode( om1.file.name ).replace('℗', ''); // Name contains special character, space?
-
-            var omItem1_settable_str = app.project.renderQueue.item(i).outputModule(1).getSettings( GetSettingsFormat.STRING_SETTABLE );
 
             var targetFolder = new Folder(target_folder);
             if (!targetFolder.exists) {
