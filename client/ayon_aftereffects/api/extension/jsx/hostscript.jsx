@@ -543,22 +543,33 @@ function getRenderInfo(comp_id){
 
             if (render_item.status == RQItemStatus.DONE){
                 // AE's duplicate() resets Output Module config to user defaults
-                // (mp4/H.264), losing format/codec set by the artist.
-                // Capture STRING_SETTABLE settings here, re-apply to duplicate.
+                // (mp4/H.264). STRING_SETTABLE alone does not reliably restore
+                // Format/Codec on the duplicate — aerender (farm) then renders
+                // mp4 even though we wanted JPG. To survive a round-trip, we
+                // stash the OM as a throw-away template before duplicate() and
+                // applyTemplate() on the new item. setSettings() is layered on
+                // top to carry any artist customizations.
                 var stored_om_settings = [];
+                var stashed_template_names = [];
                 for (j = 1; j<= render_item.numOutputModules; ++j){
                     var item = render_item.outputModule(j);
                     original_file_names.push(item.file);
                     stored_om_settings.push(
                         item.getSettings(GetSettingsFormat.STRING_SETTABLE)
                     );
+                    var stash_name = "__ayon_om_stash_" + comp_id + "_" + j;
+                    try { item.saveAsTemplate(stash_name); } catch (e) {}
+                    stashed_template_names.push(stash_name);
                 }
                 var new_item = render_item.duplicate();
                 render_item.remove();  // remove existing to limit duplications
                 for (j = 1; j<= new_item.numOutputModules; ++j){
-                    new_item.outputModule(j).setSettings(
-                        stored_om_settings[j-1]
-                    );
+                    var new_om = new_item.outputModule(j);
+                    try {
+                        new_om.applyTemplate(stashed_template_names[j-1]);
+                    } catch (e) {}
+                    // Layer specific settings on top of the restored template
+                    new_om.setSettings(stored_om_settings[j-1]);
                 }
                 continue;
             }
@@ -1001,22 +1012,28 @@ function render(target_folder, comp_id) {
         var composition = render_item.comp;
         if (composition.id == comp_id){
             if (render_item.status == RQItemStatus.DONE){
-                // Preserve Output Module config across duplicate() — AE
-                // otherwise resets format/codec to user defaults.
+                // Preserve Output Module config across duplicate(). See
+                // getRenderInfo() for the full rationale. Same template-stash
+                // + setSettings layering is used here.
                 var stored_om_settings = [];
+                var stashed_template_names = [];
                 for (var k = 1; k <= render_item.numOutputModules; ++k){
+                    var om_k = render_item.outputModule(k);
                     stored_om_settings.push(
-                        render_item.outputModule(k).getSettings(
-                            GetSettingsFormat.STRING_SETTABLE
-                        )
+                        om_k.getSettings(GetSettingsFormat.STRING_SETTABLE)
                     );
+                    var stash_name = "__ayon_om_stash_" + comp_id + "_" + k;
+                    try { om_k.saveAsTemplate(stash_name); } catch (e) {}
+                    stashed_template_names.push(stash_name);
                 }
                 var new_item = render_item.duplicate();
                 render_item.remove();
                 for (var k = 1; k <= new_item.numOutputModules; ++k){
-                    new_item.outputModule(k).setSettings(
-                        stored_om_settings[k-1]
-                    );
+                    var new_om_k = new_item.outputModule(k);
+                    try {
+                        new_om_k.applyTemplate(stashed_template_names[k-1]);
+                    } catch (e) {}
+                    new_om_k.setSettings(stored_om_settings[k-1]);
                 }
                 render_item = new_item;
             }
