@@ -214,6 +214,8 @@ def ls():
         if not data:
             continue
 
+        if not data.get("loader") or not data.get("id"):
+            continue
         # Filter to only containers.
         if "container" not in data["id"]:
             continue
