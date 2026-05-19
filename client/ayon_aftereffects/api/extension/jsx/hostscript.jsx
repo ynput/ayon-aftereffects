@@ -325,6 +325,13 @@ function importFile(path, item_name, import_options){
                 app.project.selection[0] instanceof FolderItem){
                  comp.parentFolder = app.project.selection[0]
             }
+            if (comp instanceof FootageItem && comp.mainSource) {
+                var fps = import_options['fps'] ||
+                        app.project.frameRate ||
+                        comp.mainSource.nativeFrameRate;
+
+                comp.mainSource.conformFrameRate = fps;
+            }
         } catch (error) {
             return _prepareError(error.toString() + importOptions.file.fsName);
         } finally {

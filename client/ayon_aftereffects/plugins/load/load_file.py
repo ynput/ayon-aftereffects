@@ -48,6 +48,11 @@ class FileLoader(api.AfterEffectsLoader):
         if '.psd' in path:
             import_options['ImportAsType'] = 'ImportAsType.COMP'
 
+        version_entity = context["version"]
+        version_attributes = version_entity["attrib"]
+        if "fps" in version_attributes:
+            import_options['fps'] = version_attributes["fps"]
+
         loaded_item = stub.import_file(
             path, stub.LOADED_ICON + loaded_item_name, import_options
         )
