@@ -120,15 +120,15 @@ class FileLoader(api.AfterEffectsLoader):
         version_attributes = version_entity["attrib"]
         if "fps" in version_attributes:
             return version_attributes["fps"]
-        repre_context = context["representation"]["data"]["context"]
-        task_name = repre_context.get("task", {}).get("name")
-        if task_name is not None:
-            task_entity = ayon_api.get_task_by_name(
+        task_id = context["version"]["taskId"]
+        if task_id is not None:
+            task_entity = ayon_api.get_task_by_id(
                 project_name=context["project"]["name"],
-                folder_id=context["folder"]["id"],
-                task_name=task_name
+                task_id=task_id,
+                fields={"attrib"},
             )
-            return task_entity["attrib"]["fps"]
+            if task_entity:
+                return task_entity["attrib"]["fps"]
 
         folder_fps = context["folder"]["attrib"]["fps"]
         return folder_fps
