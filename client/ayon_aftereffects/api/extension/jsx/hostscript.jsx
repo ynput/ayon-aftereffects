@@ -338,7 +338,7 @@ function importFile(path, item_name, import_options){
                 comp.mainSource.conformFrameRate = fps;
             }
         } catch (error) {
-            return _prepareError(error.toString() + importOptions.file.fsName);
+            return _prepareError(error.toString() + " (file: " + fp.fsName + ")");
         } finally {
             fp.close();
         }
