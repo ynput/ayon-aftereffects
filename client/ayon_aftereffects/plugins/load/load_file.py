@@ -124,9 +124,9 @@ class FileLoader(api.AfterEffectsLoader):
         task_name = repre_context.get("task", {}).get("name")
         if task_name is not None:
             task_entity = ayon_api.get_task_by_name(
-            context["project"]["name"],
-            folder_id=context["folder"]["id"],
-            task_name=task_name
+                project_name=context["project"]["name"],
+                folder_id=context["folder"]["id"],
+                task_name=task_name
             )
             return task_entity["attrib"]["fps"]
 
