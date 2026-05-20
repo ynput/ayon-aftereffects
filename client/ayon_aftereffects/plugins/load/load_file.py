@@ -50,7 +50,7 @@ class FileLoader(api.AfterEffectsLoader):
 
         version_entity = context["version"]
         version_attributes = version_entity["attrib"]
-        if "fps" in version_attributes:
+        if import_options.get("sequence") and "fps" in version_attributes:
             import_options['fps'] = version_attributes["fps"]
 
         loaded_item = stub.import_file(
