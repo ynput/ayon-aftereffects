@@ -327,7 +327,7 @@ function importFile(path, item_name, import_options){
             }
             if (comp instanceof FootageItem && comp.mainSource) {
                 var fps = import_options['fps'] ||
-                        app.project.frameRate ||
+                        (app.project.activeItem instanceof CompItem && app.project.activeItem.frameRate) ||
                         comp.mainSource.nativeFrameRate;
 
                 comp.mainSource.conformFrameRate = fps;
