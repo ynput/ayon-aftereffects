@@ -326,11 +326,10 @@ function importFile(path, item_name, import_options){
                  comp.parentFolder = app.project.selection[0]
             }
             if (comp instanceof FootageItem && comp.mainSource) {
-                var fps = import_options['fps'] ||
-                        (app.project.activeItem instanceof CompItem && app.project.activeItem.frameRate) ||
-                        comp.mainSource.nativeFrameRate;
-
-                comp.mainSource.conformFrameRate = fps;
+                if ('fps' in import_options){
+                    var fps = import_options['fps'];
+                    comp.mainSource.conformFrameRate = fps;
+                }
             }
         } catch (error) {
             return _prepareError(error.toString() + importOptions.file.fsName);
