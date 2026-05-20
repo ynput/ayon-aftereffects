@@ -326,14 +326,9 @@ function importFile(path, item_name, import_options){
                  comp.parentFolder = app.project.selection[0]
             }
             if (comp instanceof FootageItem && comp.mainSource) {
-                var activeItem = app.project.activeItem;
-                var fallbackFps = comp.mainSource.nativeFrameRate;
-
-                if (activeItem && activeItem instanceof CompItem) {
-                    fallbackFps = activeItem.frameRate;
-                }
-
-                var fps = import_options['fps'] || fallbackFps;
+                var fps = import_options['fps'] ||
+                        app.project.frameRate ||
+                        comp.mainSource.nativeFrameRate;
 
                 comp.mainSource.conformFrameRate = fps;
             }

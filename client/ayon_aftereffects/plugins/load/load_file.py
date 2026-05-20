@@ -1,6 +1,7 @@
 import re
 
 from ayon_aftereffects import api
+import ayon_api
 
 
 class FileLoader(api.AfterEffectsLoader):
@@ -48,10 +49,8 @@ class FileLoader(api.AfterEffectsLoader):
         if '.psd' in path:
             import_options['ImportAsType'] = 'ImportAsType.COMP'
 
-        version_entity = context["version"]
-        version_attributes = version_entity["attrib"]
-        if import_options.get("sequence") and "fps" in version_attributes:
-            import_options['fps'] = version_attributes["fps"]
+        if import_options.get("sequence"):
+            import_options['fps'] = self._get_fps_data(context)
 
         loaded_item = stub.import_file(
             path, stub.LOADED_ICON + loaded_item_name, import_options
@@ -106,3 +105,30 @@ class FileLoader(api.AfterEffectsLoader):
                 "namespace": loaded_item_name
             }
         )
+
+    def _get_fps_data(self, context: dict) -> float:
+        """Get fps data from version. Fallback to task or folder
+        if version doesn't have fps.
+
+        Args:
+            context (dict): context data with version, task and folder info
+
+        Returns:
+            float: fps value
+        """
+        version_entity = context["version"]
+        version_attributes = version_entity["attrib"]
+        if "fps" in version_attributes:
+            return version_attributes["fps"]
+        repre_context = context["representation"]["data"]["context"]
+        task_name = repre_context.get("task", {}).get("name")
+        if task_name is not None:
+            task_entity = ayon_api.get_task_by_name(
+            context["project"]["name"],
+            folder_id=context["folder"]["id"],
+            task_name=task_name
+            )
+            return task_entity["attrib"]["fps"]
+
+        folder_fps = context["folder"]["attrib"]["fps"]
+        return folder_fps
