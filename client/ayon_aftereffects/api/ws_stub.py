@@ -187,12 +187,18 @@ class AfterEffectsServerStub():
             all_items = self.get_items(comps=True,
                                        folders=True,
                                        footages=True)
-        item_ids = [int(item.id) for item in all_items]
+        item_ids: set[int] = {int(item.id) for item in all_items}
         cleaned_data = []
         for meta in result_meta:
             # do not added instance with nonexistend item id
             if meta.get("members"):
                 if int(meta["members"][0]) not in item_ids:
+                    continue
+
+                if not meta.get("loader"):
+                    continue
+
+                if not meta.get("id"):
                     continue
 
             cleaned_data.append(meta)
