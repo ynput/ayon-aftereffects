@@ -214,11 +214,16 @@ def ls():
         if not data:
             continue
 
-        if not data.get("loader") or not data.get("id"):
-            continue
         # Filter to only containers.
-        if "container" not in data["id"]:
+        if "container" not in data.get("id", ""):
             continue
+
+        required = ["id", "name", "namespace", "loader", "representation"]
+        missing = [key for key in required if key not in data]
+        if missing:
+            log.warning("Container '%s' is missing required keys: %s",
+                        item, missing)
+            return
 
         # Append transient data
         data["objectName"] = item.name.replace(stub.LOADED_ICON, '')
