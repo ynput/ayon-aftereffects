@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import platform
 import subprocess
@@ -69,12 +71,8 @@ class AEPrelaunchHook(PreLaunchHook):
             "run", script_path, executable_path
         )
         # Add workfile path if exists
-        workfile_path = self.data["last_workfile_path"]
-        if (
-            self.data.get("start_last_workfile")
-            and workfile_path
-            and os.path.exists(workfile_path)
-        ):
+        workfile_path = self.get_workfile_path()
+        if workfile_path:
             new_launch_args.append(workfile_path)
 
         workfile_startup = self.data.get("workfile_startup", False)
@@ -90,3 +88,17 @@ class AEPrelaunchHook(PreLaunchHook):
         self.launch_context.kwargs = get_launch_kwargs(
             self.launch_context.kwargs
         )
+
+    def get_workfile_path(self) -> str | None:
+        """Get workfile path from data."""
+        workfile_path = self.data.get("workfile_path")
+        if workfile_path:
+            return workfile_path
+
+        if not self.data.get("start_last_workfile"):
+            return None
+
+        workfile_path = self.data["last_workfile_path"]
+        if os.path.exists(workfile_path):
+            return workfile_path
+        return None
