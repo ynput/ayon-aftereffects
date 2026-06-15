@@ -26,6 +26,14 @@ from ayon_core.addon import AddonsManager
 from ayon_core.tools.utils import get_ayon_qt_app
 from ayon_core.pipeline.context_tools import get_current_context
 
+# Function 'save_next_version' was introduced in ayon-core 1.5.0
+try:
+    from ayon_core.pipeline.workfile import save_next_version
+except ImportError:
+    from ayon_core.pipeline.context_tools import (
+        version_up_current_workfile as save_next_version
+    )
+
 from ayon_aftereffects.api import ae_host_tools
 
 from .webserver import WebServerTool
@@ -541,6 +549,12 @@ class AfterEffectsRoute(WebSocketRoute):
         partial_method = functools.partial(build_workfile_template)
 
         ProcessLauncher.execute_in_main_thread(partial_method)
+
+        # Required return statement.
+        return "nothing"
+
+    def version_up_workfile_route(self):
+        ProcessLauncher.execute_in_main_thread(save_next_version)
 
         # Required return statement.
         return "nothing"
