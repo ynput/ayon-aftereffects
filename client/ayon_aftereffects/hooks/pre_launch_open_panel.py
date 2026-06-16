@@ -20,6 +20,18 @@ class OpenPanelOnFirstLaunch(PreLaunchHook):
     launch_types = {LaunchTypes.local}
 
     def execute(self):
+        # The panel (JavaScript) cannot read AYON settings directly, so the
+        # core "Version Up Workfile" menu setting is passed through an env var
+        # that the panel reads via ExtendScript '$.getenv'.
+        version_up_enabled = bool(
+            self.data["project_settings"]
+            .get("core", {}).get("tools", {})
+            .get("ayon_menu", {}).get("version_up_current_workfile")
+        )
+        self.launch_context.env["AYON_VERSION_UP_WORKFILE"] = (
+            "true" if version_up_enabled else "false"
+        )
+
         try:
             settings = self.data["project_settings"]["aftereffects"]
             enabled = bool(settings["auto_open_panel"])
