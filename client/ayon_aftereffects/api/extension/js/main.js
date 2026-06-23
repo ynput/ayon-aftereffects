@@ -30,6 +30,14 @@ async function startUp(url){
         WSRPC.DEBUG = true;
         WSRPC.TRACE = true;
     }
+
+    // hide "Version Up Workfile" button unless enabled in AYON core settings
+    promis = runEvalScript("getEnv('AYON_VERSION_UP_WORKFILE')");
+    var version_up = await promis;
+    if (!version_up || version_up.toString() != 'true'){
+        $("#version-up-workfile-button").parent().hide();
+    }
+
     // run rest only after resolved promise
     main(res);
 }
