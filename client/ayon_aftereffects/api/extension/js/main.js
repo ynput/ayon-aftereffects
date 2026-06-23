@@ -5,6 +5,12 @@ indent: 4, maxerr: 50 */
 
 var csInterface = new CSInterface();
 
+// Signal to the startup JSX that the panel loaded successfully.
+// open_ayon_panel.jsx resets this flag to false at the start of each
+// launch, then polls until it sees true (workspace restored the panel)
+// or times out and opens the panel via executeCommand.
+csInterface.evalScript('app.preferences.savePrefAsBool("AYON", "panelOpen", true)');
+
 log.warn("script start");
 
 WSRPC.DEBUG = false;
@@ -68,12 +74,28 @@ function main(websocket_url){
 
     log.warn("connected");
 
+    RPC.call('AfterEffects.ping').then(function (data) {
+        log.warn('Result for calling server route "ping": ', data);
+    }, function (error) {
+        log.warn(error);
+    });
+
     RPC.addRoute('AfterEffects.open', function (data) {
         log.warn('Server called client route "open":', data);
         var escapedPath = EscapeStringForJSX(data.path);
         return runEvalScript("fileOpen('" + escapedPath +"')")
             .then(function(result){
                 log.warn("open: " + result);
+                return result;
+            });
+    });
+    
+    RPC.addRoute('AfterEffects.run_jsx_file', function (data) {
+        log.warn('Server called client route "run_jsx_file":', data);
+        var escapedPath = EscapeStringForJSX(data.path);
+        return runEvalScript("runJsxFile('" + escapedPath + "')")
+            .then(function(result){
+                log.warn("run_jsx_file: " + result);
                 return result;
             });
     });
@@ -316,7 +338,30 @@ function main(websocket_url){
             log.warn("add_item_instead_placeholder: " + result);
             return result;
         });
-});
+   });
+  
+   RPC.addRoute('AfterEffects.add_comp_to_render_queue', function (data) {
+       log.warn('Server called client route "add_comp_to_render_queue":', data);
+       var outputPath = "undefined";
+       if (data.output_path) {
+           outputPath = "'" + EscapeStringForJSX(data.output_path) + "'";
+       }
+       return runEvalScript("addCompToRenderQueue(" + data.comp_id + ", " +
+           outputPath + ")")
+           .then(function (result) {
+               log.warn("add_comp_to_render_queue: " + result);
+               return result;
+           });
+   });
+
+   RPC.addRoute('AfterEffects.remove_comp_from_render_queue', function (data) {
+       log.warn('Server called client route "remove_comp_from_render_queue":', data);
+       return runEvalScript("removeCompFromRenderQueue(" + data.comp_id + ")")
+           .then(function (result) {
+               log.warn("remove_comp_from_render_queue: " + result);
+               return result;
+           });
+   });
 
    RPC.addRoute('AfterEffects.render', function (data) {
     log.warn('Server called client route "render":', data);

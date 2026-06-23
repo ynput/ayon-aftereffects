@@ -22,6 +22,28 @@ function sayHello(){
     alert("hello from ExtendScript");
 }
 
+function runJsxFile(path){
+    /**
+     * Execute an external JSX file in current AE session.
+     *
+     * Args:
+     *     path (string): Absolute path to jsx.
+     */
+    var jsxFile = new File(path);
+    if (!jsxFile.exists){
+        return _prepareError("JSX file not found: " + path);
+    }
+
+    try{
+        var result = $.evalFile(jsxFile);
+        return _prepareSingleValue(result);
+    } catch (error) {
+        return _prepareError(
+            "Failed to execute JSX file: " + error.toString()
+        );
+    }
+}
+
 function getEnv(variable){
     return $.getenv(variable);
 }
@@ -303,6 +325,13 @@ function importFile(path, item_name, import_options){
                 app.project.selection[0] instanceof FolderItem){
                  comp.parentFolder = app.project.selection[0]
             }
+            if (
+                comp instanceof FootageItem
+                && comp.mainSource
+                && 'fps' in import_options
+            ) {
+              comp.mainSource.conformFrameRate = import_options['fps'];
+            }
         } catch (error) {
             return _prepareError(error.toString() + importOptions.file.fsName);
         } finally {
@@ -423,7 +452,8 @@ function getCompProperties(comp_id){
         "framesDuration": comp.duration * comp.frameRate,
         "frameRate": comp.frameRate,
         "width": comp.width,
-        "height": comp.height});
+        "height": comp.height,
+        "pixelAspect": comp.pixelAspect});
 }
 
 function setCompProperties(comp_id, frameStart, framesCount, frameRate,
@@ -835,7 +865,130 @@ function isFileSequence (item){
     return false;
 }
 
-function render(target_folder, comp_id){
+function _getComp(comp_id) {
+    /**
+     * Return composition item by id.
+     *
+     * Args:
+     *    comp_id (int): Project item id of composition.
+     * Returns:
+     *    (CompItem|undefined): Matching composition or undefined.
+     */
+    var comp = app.project.itemByID(comp_id);
+    if (!(comp && (comp instanceof CompItem))) {
+        return undefined;
+    }
+    return comp;
+}
+
+function _getRenderQueueItem(comp_id) {
+    /**
+     * Return render queue item for a composition id.
+     *
+     * Args:
+     *    comp_id (int): Project item id of composition.
+     * Returns:
+     *    (RenderQueueItem|undefined): Matching render queue item or undefined.
+     */
+    if (!_getComp(comp_id))
+        return undefined;
+
+    for (i = 1; i <= app.project.renderQueue.numItems; ++i) {
+        var renderQueueItem = app.project.renderQueue.item(i);
+        if (renderQueueItem.comp && renderQueueItem.comp.id == comp_id) {
+            return renderQueueItem;
+        }
+    }
+    return undefined;
+}
+
+function removeCompFromRenderQueue(comp_id) {
+    /**
+     * Remove a composition from render queue if present.
+     *
+     * Args:
+     *    comp_id (int): Project item id of composition.
+     * Returns:
+     *    (str): Prepared JSON response with boolean result.
+     */
+    var renderQueueItem = _getRenderQueueItem(comp_id)
+    if (renderQueueItem) {
+        renderQueueItem.remove();
+        return _prepareSingleValue(true);
+    }
+    return _prepareSingleValue(false);
+}
+
+function _setOutputPath(comp_id, path) {
+    /**
+     * Set output directory and file name for all output modules of a comp.
+     *
+     * Uses render queue item for `comp_id` and updates each output module with:
+     * - `Base Path`: `path` if provided, otherwise `<project_path>/output`
+     * - `File Name`: decoded composition name
+     *
+     * Args:
+     *    comp_id (int): Project item id of composition.
+     *    path (str|undefined): Target output folder path.
+     * Returns:
+     *    (str): Prepared JSON response with boolean result.
+     */
+    var renderQueueItem = _getRenderQueueItem(comp_id)
+    var compName = renderQueueItem.comp.name;
+    var basePath;
+    if (path) {
+        basePath = path;
+    } else if (app.project && app.project.file && app.project.file.path) {
+        basePath = "".concat(app.project.file.path, "/", "output");
+    } else {
+        // Fallback for unsaved projects: use a safe, writable location
+        basePath = "".concat(Folder.myDocuments.fsName, "/", "output");
+    }
+
+    for (i = 1; i <= renderQueueItem.numOutputModules; ++i) {
+        var om = renderQueueItem.outputModule(i);
+        var fileName = File.decode(compName);
+        var outputPath = new Folder(basePath);
+        if (!outputPath.exists) {
+            outputPath.create();
+        }
+        var localizedPath = outputPath.fsName;
+
+        var new_data = {
+            "Output File Info": {
+                "Base Path": localizedPath,
+                "File Name": fileName
+            }
+        };
+
+        om.setSettings(new_data);
+    }
+    return _prepareSingleValue(true);
+}
+
+function addCompToRenderQueue(comp_id, output_path) {
+    /**
+     * Add composition to render queue if not already queued.
+     *
+     * Args:
+     *    comp_id (int): Project item id of composition.
+     *    output_path (str|undefined): Target output folder path.
+     * Returns:
+     *    (str): Prepared JSON response with boolean result.
+     */
+    var renderQueueItem = _getRenderQueueItem(comp_id)
+    if (renderQueueItem) {
+        return _prepareSingleValue(true);
+    }
+    comp = _getComp(comp_id)
+    if (comp && app.project.renderQueue.items.add(comp)) {
+        _setOutputPath(comp_id, output_path);
+        return _prepareSingleValue(true);
+    }
+    return _prepareSingleValue(false);
+}
+
+function render(target_folder, comp_id) {
     var out_dir = new Folder(target_folder);
     var out_dir = out_dir.fsName;
     for (i = 1; i <= app.project.renderQueue.numItems; ++i){

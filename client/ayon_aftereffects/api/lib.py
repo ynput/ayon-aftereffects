@@ -1,18 +1,48 @@
 from __future__ import annotations
 import os
 import re
+import sys
 import json
 import contextlib
-import logging
 import pyblish
 from typing import Union
 
 from ayon_core.pipeline.context_tools import get_current_task_entity
+from ayon_core.lib import Logger
 
 from .ws_stub import get_stub
 
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log = Logger.get_logger(__name__)
+
+
+def raise_window_to_front(window):
+    """Raise a Qt window to the foreground.
+    On Windows, activateWindow() is silently ignored when the calling
+    process does not own the foreground (e.g. when triggered via the
+    CEP panel). AttachThreadInput temporarily borrows the foreground
+    thread's input state so SetForegroundWindow succeeds even on the
+    first call, before Python has ever received focus.
+    Args:
+        window (QtWidgets.QWidget): Window to bring to the front.
+    """
+    window.show()
+    window.raise_()
+    window.activateWindow()
+    if sys.platform == "win32":
+        import ctypes
+        user32 = ctypes.windll.user32
+        hwnd = int(window.winId())
+        foreground_hwnd = user32.GetForegroundWindow()
+        foreground_tid = user32.GetWindowThreadProcessId(
+            foreground_hwnd, None
+        )
+        current_tid = ctypes.windll.kernel32.GetCurrentThreadId()
+        if foreground_tid and foreground_tid != current_tid:
+            user32.AttachThreadInput(current_tid, foreground_tid, True)
+            user32.SetForegroundWindow(hwnd)
+            user32.AttachThreadInput(current_tid, foreground_tid, False)
+        else:
+            user32.SetForegroundWindow(hwnd)
 
 
 @contextlib.contextmanager
@@ -34,24 +64,26 @@ def get_extension_manifest_path():
     )
 
 
-def get_unique_layer_name(layers, name):
-    """
-        Gets all layer names and if 'name' is present in them, increases
-        suffix by 1 (eg. creates unique layer name - for Loader)
+def get_unique_item_name(items, name):
+    """Creates unique name for 'item'.
+
+    Gets all item names (compositions|containers) and if 'name' is
+    present in them, increases suffix by 1 (eg. creates unique item name
+      - for Loader)
+
     Args:
-        layers (list): of strings, names only
+        items (list): of strings, names only
         name (string):  checked value
 
     Returns:
         (string): name_00X (without version)
     """
     names = {}
-    for layer in layers:
-        layer_name = re.sub(r'_\d{3}$', '', layer)
-        if layer_name in names.keys():
-            names[layer_name] = names[layer_name] + 1
-        else:
-            names[layer_name] = 1
+    index_regex = re.compile(r"_\d{3}$")
+    for item in items:
+        item_name = index_regex.sub("", item)
+        names.setdefault(item_name, 0)
+        names[item_name] += 1
     occurrences = names.get(name, 0)
 
     return "{}_{:0>3d}".format(name, occurrences + 1)
@@ -205,4 +237,4 @@ def publish_in_test(log, close_plugin_name=None):
             try:
                 close_plugin().process(context)
             except Exception as exp:
-                print(exp)
+                log.error(exp)

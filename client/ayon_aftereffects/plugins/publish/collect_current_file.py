@@ -8,7 +8,7 @@ from ayon_aftereffects.api import get_stub
 class CollectCurrentFile(pyblish.api.ContextPlugin):
     """Inject the current working file into context"""
 
-    order = pyblish.api.CollectorOrder - 0.49
+    order = pyblish.api.CollectorOrder - 0.5
     label = "Current File"
     hosts = ["aftereffects"]
 

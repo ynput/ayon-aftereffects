@@ -8,6 +8,7 @@ from ayon_core.pipeline import (
 )
 from ayon_core.lib import prepare_template_data
 from ayon_core.pipeline.create import PRODUCT_NAME_ALLOWED_SYMBOLS
+
 from ayon_aftereffects import api
 from ayon_aftereffects.api.pipeline import cache_and_get_instances
 from ayon_aftereffects.api.lib import set_settings
@@ -21,9 +22,11 @@ class RenderCreator(Creator):
     """
     identifier = "render"
     label = "Render"
-    product_type = "render"
+    product_base_type = "render"
+    product_type = product_base_type
     description = "Render creator"
     icon = "eye"
+    settings_category = "aftereffects"
 
     create_allow_context_change = True
 
@@ -97,8 +100,15 @@ class RenderCreator(Creator):
             if self.rename_comp_to_product_name:
                 data["orig_comp_name"] = composition_name
 
+            product_type = data.get("productType")
+            if not product_type:
+                product_type = self.product_base_type
             new_instance = CreatedInstance(
-                self.product_type, comp_product_name, data, self
+                product_base_type=self.product_base_type,
+                product_type=product_type,
+                product_name=comp_product_name,
+                data=data,
+                creator=self,
             )
 
             api.get_stub().imprint(new_instance.id,
@@ -126,6 +136,11 @@ class RenderCreator(Creator):
                     comp_ids=[comp.id],
                     print_msg=False,
                     entity=entity)
+            self._ensure_comp_in_render_queue(
+                stub=stub,
+                comp_id=comp.id,
+                comp_name=comp_product_name
+            )
 
     def get_pre_create_attr_defs(self):
         output = [
@@ -163,15 +178,41 @@ class RenderCreator(Creator):
             )
         ]
 
+    def _ensure_comp_in_render_queue(
+        self, stub: object, comp_id: int, comp_name: str
+    ) -> None:
+        """Ensure composition is present in After Effects render queue.
+
+        Args:
+            stub (object): Connected After Effects server stub.
+            comp_id (int): Composition item id in After Effects.
+            comp_name (str): Composition/product name for readable errors.
+
+        Raises:
+            CreatorError: When composition cannot be queued.
+        """
+        try:
+            queued = stub.add_comp_to_render_queue(comp_id)
+        except ValueError as exc:
+            raise CreatorError(
+                f"Failed to add '{comp_name}' to render queue: {exc}"
+            ) from exc
+
+        if not queued:
+            raise CreatorError(
+                f"Failed to add '{comp_name}' to render queue."
+            )
+
     def collect_instances(self):
         for instance_data in cache_and_get_instances(self):
-            # legacy instances have product_type=='render' or 'renderLocal', use them
             creator_id = instance_data.get("creator_identifier")
             if not creator_id:
                 # NOTE this is for backwards compatibility but probably can be
                 #   removed
-                creator_id = instance_data.get("family", "")
-                creator_id = creator_id.replace("Local", "")
+                # - legacy family was 'render' or 'renderLocal'
+                family = instance_data.get("family", "").replace("Local", "")
+                if family == self.product_base_type:
+                    creator_id = self.identifier
 
             if creator_id == self.identifier:
                 instance_data = self._handle_legacy(instance_data)
@@ -206,23 +247,6 @@ class RenderCreator(Creator):
                         new_comp_name = "dummyCompName"
                     api.get_stub().rename_item(comp_id,
                                                new_comp_name)
-
-    def apply_settings(self, project_settings):
-        plugin_settings = (
-            project_settings["aftereffects"]["create"]["RenderCreator"]
-        )
-
-        self.mark_for_review = plugin_settings["mark_for_review"]
-        self.default_variants = plugin_settings.get(
-            "default_variants",
-            plugin_settings.get("defaults") or []
-        )
-        self.rename_comp_to_product_name = plugin_settings.get(
-            "rename_comp_to_product_name", self.rename_comp_to_product_name
-        )
-        self.force_setting_values = plugin_settings.get(
-            "force_setting_values", self.force_setting_values
-        )
 
     def get_detail_description(self):
         return """Creator for Render instances
@@ -259,7 +283,9 @@ class RenderCreator(Creator):
         task_entity,
         variant,
         host_name,
-        instance
+        instance=None,
+        project_entity=None,
+        product_type=None,
     ):
         dynamic_data = {}
         if instance is not None:
@@ -287,7 +313,8 @@ class RenderCreator(Creator):
         if not instance_data.get("creator_attributes"):
             is_old_farm = instance_data.get("family") != "renderLocal"
             instance_data["creator_attributes"] = {"farm": is_old_farm}
-            instance_data["productType"] = self.product_type
+            instance_data["productBaseType"] = self.product_base_type
+            instance_data["productType"] = self.product_base_type
 
         if instance_data["creator_attributes"].get("mark_for_review") is None:
             instance_data["creator_attributes"]["mark_for_review"] = True

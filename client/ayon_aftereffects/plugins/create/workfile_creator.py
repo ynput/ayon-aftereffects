@@ -8,7 +8,8 @@ from ayon_aftereffects.api.pipeline import cache_and_get_instances
 
 class AEWorkfileCreator(AutoCreator):
     identifier = "workfile"
-    product_type = "workfile"
+    product_base_type = "workfile"
+    product_type = product_base_type
 
     default_variant = "Main"
 
@@ -21,7 +22,11 @@ class AEWorkfileCreator(AutoCreator):
             if creator_id == self.identifier:
                 product_name = instance_data["productName"]
                 instance = CreatedInstance(
-                    self.product_type, product_name, instance_data, self
+                    product_base_type=self.product_base_type,
+                    product_type=self.product_base_type,
+                    product_name=product_name,
+                    data=instance_data,
+                    creator=self,
                 )
                 self._add_instance_to_context(instance)
 
@@ -32,7 +37,7 @@ class AEWorkfileCreator(AutoCreator):
     def create(self, options=None):
         existing_instance = None
         for instance in self.create_context.instances:
-            if instance.product_type == self.product_type:
+            if instance.creator_identifier == self.identifier:
                 existing_instance = instance
                 break
 
@@ -63,17 +68,13 @@ class AEWorkfileCreator(AutoCreator):
                 "task": task_name,
                 "variant": self.default_variant,
             }
-            data.update(self.get_dynamic_data(
-                project_name,
-                folder_entity,
-                task_entity,
-                self.default_variant,
-                host_name,
-                None,
-            ))
 
             new_instance = CreatedInstance(
-                self.product_type, product_name, data, self
+                product_base_type=self.product_base_type,
+                product_type=self.product_base_type,
+                product_name=product_name,
+                data=data,
+                creator=self,
             )
             self._add_instance_to_context(new_instance)
 

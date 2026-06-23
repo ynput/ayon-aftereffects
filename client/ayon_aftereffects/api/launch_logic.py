@@ -2,7 +2,6 @@ import os
 import sys
 import subprocess
 import collections
-import logging
 import asyncio
 import functools
 import traceback
@@ -14,21 +13,82 @@ from wsrpc_aiohttp import (
 
 from qtpy import QtCore
 
-from ayon_core.lib import Logger, is_in_tests, env_value_to_bool
+from ayon_core.lib import (
+    Logger,
+    is_in_tests,
+    env_value_to_bool,
+    register_event_callback,
+    emit_event,
+)
+import ayon_api
 from ayon_core.pipeline import install_host
 from ayon_core.addon import AddonsManager
-from ayon_core.tools.utils import host_tools, get_ayon_qt_app
+from ayon_core.tools.utils import get_ayon_qt_app
+from ayon_core.pipeline.context_tools import get_current_context
+
+from ayon_aftereffects.api import ae_host_tools
 
 from .webserver import WebServerTool
 from .ws_stub import get_stub
-from .lib import set_settings
+from .lib import raise_window_to_front, set_settings
 
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log = Logger.get_logger(__name__)
+
+
+console_window = None
 
 
 def safe_excepthook(*args):
     traceback.print_exception(*args)
+
+
+def _emit_workfile_open_for_launch(host):
+    """Emit workfile.opened for a AEP file opened natively via CLI arg.
+
+    Args:
+        host (AfterEffectsHost): The registered host instance.
+    """
+    filepath = host.get_current_workfile()
+    if not filepath:
+        log.debug(
+            "No workfile detected after launch, "
+            "skipping workfile.opened event."
+        )
+        return
+    context = get_current_context()
+    project_name = context.get("project_name")
+    folder_path = context.get("folder_path")
+    task_name = context.get("task_name")
+    if not all([project_name, folder_path, task_name]):
+        log.warning(
+            "Incomplete context for workfile.opened event: "
+            "project=%s, folder=%s, task=%s",
+            project_name, folder_path, task_name,
+        )
+        return
+    folder_entity = ayon_api.get_folder_by_path(project_name, folder_path)
+    if not folder_entity:
+        log.warning(
+            "Could not find folder entity for path '%s'", folder_path
+        )
+        return
+    task_entity = ayon_api.get_task_by_name(
+        project_name, folder_entity["id"], task_name
+    )
+    if not task_entity:
+        log.warning(
+            "Could not find task entity '%s'", task_name
+        )
+        return
+    event_data = host._get_workfile_event_data(
+        project_name, folder_entity, task_entity, filepath
+    )
+    # Set AYON_WORKDIR to match the behaviour of open_workfile_with_context
+    os.environ["AYON_WORKDIR"] = event_data["workdir_path"]
+    host._emit_workfile_open_event(event_data, after_open=True)
+    log.info(
+        "Emitted workfile.opened for launcher-opened file: %s", filepath
+    )
 
 
 def main(*subprocess_args):
@@ -46,6 +106,16 @@ def main(*subprocess_args):
 
     launcher = ProcessLauncher(subprocess_args)
     launcher.start()
+
+    # If a workfile path was passed as a launch argument, AE opens
+    # it natively via CLI, bypassing open_workfile_with_context().
+    # Queue emission of the workfile.opened event for after the
+    # host connects (callbacks are processed once the loop timer
+    # starts, which only happens after host connection is confirmed).
+    if len(subprocess_args) > 1 and os.path.exists(subprocess_args[-1]):
+        launcher.execute_in_main_thread(
+            functools.partial(_emit_workfile_open_for_launch, host)
+        )
 
     env_workfiles_on_launch = os.getenv(
         "AYON_AFTEREFFECTS_WORKFILES_ON_LAUNCH",
@@ -72,7 +142,7 @@ def main(*subprocess_args):
             save = True
 
         launcher.execute_in_main_thread(
-            lambda: host_tools.show_tool_by_name("workfiles", save=save)
+            lambda: ae_host_tools.show_tool_by_name("workfiles", save=save)
         )
 
     sys.exit(app.exec_())
@@ -83,7 +153,31 @@ def show_tool_by_name(tool_name):
     if tool_name == "loader":
         kwargs["use_context"] = True
 
-    host_tools.show_tool_by_name(tool_name, **kwargs)
+    ae_host_tools.show_tool_by_name(tool_name, **kwargs)
+
+
+def show_script_editor():
+    from ayon_core.lib import is_func_signature_supported
+    from ayon_core.tools.console_interpreter import InterpreterController
+    from ayon_core.tools.console_interpreter.ui import ConsoleInterpreterWindow
+
+    # Global so it doesn't get garbage collected instantly
+    global console_window
+    if console_window is None:
+        # Signature added in ayon-core 1.7.0
+        if is_func_signature_supported(
+            InterpreterController, name="aftereffects"
+        ):
+            controller = InterpreterController(name="aftereffects")
+        else:
+            controller = InterpreterController()
+        console_window = ConsoleInterpreterWindow(controller)
+        console_window.setWindowTitle("Python Script Editor - AFX")
+        console_window.setWindowFlags(
+            console_window.windowFlags() |
+            QtCore.Qt.Dialog |
+            QtCore.Qt.WindowMinimizeButtonHint)
+    raise_window_to_front(console_window)
 
 
 class ProcessLauncher(QtCore.QObject):
@@ -97,7 +191,7 @@ class ProcessLauncher(QtCore.QObject):
 
         super(ProcessLauncher, self).__init__()
 
-        # Keep track if launcher was alreadu started
+        # Keep track if launcher was already started
         self._started = False
 
         self._process = None
@@ -114,6 +208,11 @@ class ProcessLauncher(QtCore.QObject):
 
         self._start_process_timer = start_process_timer
         self._loop_timer = loop_timer
+
+        register_event_callback(
+            "application.close",
+            lambda: ProcessLauncher.execute_in_main_thread(self.exit),
+        )
 
     @property
     def log(self):
@@ -141,7 +240,6 @@ class ProcessLauncher(QtCore.QObject):
             return False
 
         try:
-
             _stub = get_stub()
             if _stub:
                 return True
@@ -245,7 +343,7 @@ class ProcessLauncher(QtCore.QObject):
         websocket_server.add_route("*", "/ws/", WebSocketAsync)
         # Add after effects route to websocket handler
 
-        print("Adding {} route".format(self.route_name))
+        self.log.info("Adding {} route".format(self.route_name))
         WebSocketAsync.add_route(
             self.route_name, AfterEffectsRoute
         )
@@ -314,6 +412,7 @@ class AfterEffectsRoute(WebSocketRoute):
             notification after long running job on the server or similar
     """
     instance = None
+    _application_launched_emitted = False
 
     def init(self, **kwargs):
         # Python __init__ must be return "self".
@@ -325,6 +424,11 @@ class AfterEffectsRoute(WebSocketRoute):
     # server functions
     async def ping(self):
         log.debug("someone called AfterEffects route ping")
+        if not AfterEffectsRoute._application_launched_emitted:
+            AfterEffectsRoute._application_launched_emitted = True
+            ProcessLauncher.execute_in_main_thread(
+                lambda: emit_event("application.launched")
+            )
 
     # This method calls function on the client side
     # client functions
@@ -372,6 +476,20 @@ class AfterEffectsRoute(WebSocketRoute):
 
     async def setall_route(self):
         self._settings_route(True, True)
+
+    async def script_editor_route(self):
+        ProcessLauncher.execute_in_main_thread(show_script_editor)
+
+        # Required return statement.
+        return "nothing"
+
+    async def run_scripts_route(self):
+        ProcessLauncher.execute_in_main_thread(
+            ae_host_tools.show_run_scripts_tool
+        )
+
+        # Required return statement.
+        return "nothing"
 
     async def experimental_tools_route(self):
         self._tool_route("experimental_tools")

@@ -1,39 +1,34 @@
 import re
-import os
-from ayon_core.pipeline import get_representation_path
+
 from ayon_aftereffects import api
-from ayon_aftereffects.api.lib import get_unique_layer_name
+import ayon_api
 
 
 class FileLoader(api.AfterEffectsLoader):
-    """Load images
+    """Load images and full AE workfiles.
 
     Stores the imported product version in a container named after the folder.
     """
     label = "Load file"
 
-    product_types = {
+    product_base_types = {
         "image",
         "plate",
         "render",
         "prerender",
         "review",
         "audio",
+        "workfile",
     }
+    product_types = product_base_types
     representations = {"*"}
 
-    def load(self, context, name=None, namespace=None, data=None):
+    def load(self, context, name=None, namespace=None, options=None):
         stub = self.get_stub()
-        selected_folders = stub.get_selected_items(
-            comps=False, folders=True, footages=False)
-        if selected_folders:
-            stub.select_items([folder.id for folder in selected_folders])
-        layers = stub.get_items(comps=True, folders=True, footages=True)
-        existing_layers = [layer.name for layer in layers]
-        comp_name = get_unique_layer_name(
-            existing_layers, "{}_{}".format(
-                context["folder"]["name"], name
-            )
+        loaded_item_name = f"{context['folder']['name']}_{name}"
+        footages = stub.get_items(comps=False, footages=True, folders=False)
+        loaded_item_name = self._get_unique_loaded_item_name(
+            stub, footages, loaded_item_name
         )
 
         import_options = {}
@@ -46,73 +41,94 @@ class FileLoader(api.AfterEffectsLoader):
         if not path:
             repr_id = context["representation"]["id"]
             self.log.warning(
-                "Representation id `{}` is failing to load".format(repr_id))
+                f"Representation id `{repr_id}` is failing to load"
+            )
             return
 
         path = path.replace("\\", "/")
         if '.psd' in path:
             import_options['ImportAsType'] = 'ImportAsType.COMP'
 
-        comp = stub.import_file(path, stub.LOADED_ICON + comp_name,
-                                import_options)
-        if not comp:
+        if import_options.get("sequence"):
+            import_options['fps'] = self._get_fps_data(context)
+
+        loaded_item = stub.import_file(
+            path, stub.LOADED_ICON + loaded_item_name, import_options
+        )
+        if not loaded_item:
             self.log.warning(
-                "Representation `{}` is failing to load".format(path))
+                f"Representation `{path}` is failing to load"
+            )
             self.log.warning("Check host app for alert error.")
             return
 
-        self[:] = [comp]
-        namespace = namespace or comp_name
+        self[:] = [loaded_item]
+        namespace = namespace or loaded_item_name
         return api.containerise(
             name,
             namespace,
-            comp,
+            loaded_item,
             context,
             self.__class__.__name__
         )
 
     def update(self, container, context):
         stub = self.get_stub()
-        layer = container.pop("layer")
+        item = container.pop("layer")
 
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
         repre_entity = context["representation"]
 
-        namespace_from_container = re.sub(r'_\d{3}$', '',
-                                          container["namespace"])
-        layer_name = "{}_{}".format(folder_name, product_name)
-        #
-        if namespace_from_container != layer_name:
-            layers = stub.get_items(comps=True)
-            existing_layers = [layer.name for layer in layers]
-            layer_name = get_unique_layer_name(
-                existing_layers,
-                "{}_{}".format(folder_name, product_name))
-        else:  # switching version - keep same name
-            layer_name = container["namespace"]
-        path = get_representation_path(repre_entity)
-
-        if len(repre_entity["files"]) > 1:
-           path = os.path.dirname(path)
-        # with aftereffects.maintained_selection():  # TODO
-        stub.replace_item(layer.id, path, stub.LOADED_ICON + layer_name)
-        stub.imprint(
-            layer.id, {"representation": repre_entity["id"],
-                       "name": product_name,
-                       "namespace": layer_name}
+        namespace_from_container = re.sub(
+            r"_\d{3}$", "", container["namespace"]
         )
 
-    def remove(self, container):
-        """
-            Removes element from scene: deletes layer + removes from Headline
-        Args:
-            container (dict): container to be removed - used to get layer_id
-        """
-        stub = self.get_stub()
-        layer = container.pop("layer")
-        stub.imprint(layer.id, {})
-        stub.delete_item(layer.id)
+        loaded_item_name = f"{folder_name}_{product_name}"
+        if namespace_from_container != loaded_item_name:
+            footages = stub.get_items(
+                comps=False, footages=True, folders=False
+            )
+            loaded_item_name = self._get_unique_loaded_item_name(
+                stub, footages, loaded_item_name
+            )
+        else:  # switching version - keep same name
+            loaded_item_name = container["namespace"]
+        path = self.filepath_from_context(context)
 
-    def switch(self, container, context):
-        self.update(container, context)
+        stub.replace_item(item.id, path, stub.LOADED_ICON + loaded_item_name)
+        stub.imprint(
+            item.id,
+            {
+                "representation": repre_entity["id"],
+                "name": product_name,
+                "namespace": loaded_item_name
+            }
+        )
+
+    def _get_fps_data(self, context: dict) -> float:
+        """Get fps data from version. Fallback to task or folder
+        if version doesn't have fps.
+
+        Args:
+            context (dict): context data with version, task and folder info
+
+        Returns:
+            float: fps value
+        """
+        version_entity = context["version"]
+        version_attributes = version_entity["attrib"]
+        if "fps" in version_attributes:
+            return version_attributes["fps"]
+        task_id = context["version"]["taskId"]
+        if task_id is not None:
+            task_entity = ayon_api.get_task_by_id(
+                project_name=context["project"]["name"],
+                task_id=task_id,
+                fields={"attrib"},
+            )
+            if task_entity:
+                return task_entity["attrib"]["fps"]
+
+        folder_fps = context["folder"]["attrib"]["fps"]
+        return folder_fps
