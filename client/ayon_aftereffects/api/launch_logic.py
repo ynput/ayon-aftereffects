@@ -25,6 +25,7 @@ from ayon_core.pipeline import install_host
 from ayon_core.addon import AddonsManager
 from ayon_core.tools.utils import get_ayon_qt_app
 from ayon_core.pipeline.context_tools import get_current_context
+from ayon_core.pipeline.workfile import save_next_version
 
 from ayon_aftereffects.api import ae_host_tools
 
@@ -541,6 +542,12 @@ class AfterEffectsRoute(WebSocketRoute):
         partial_method = functools.partial(build_workfile_template)
 
         ProcessLauncher.execute_in_main_thread(partial_method)
+
+        # Required return statement.
+        return "nothing"
+
+    def version_up_workfile_route(self):
+        ProcessLauncher.execute_in_main_thread(save_next_version)
 
         # Required return statement.
         return "nothing"

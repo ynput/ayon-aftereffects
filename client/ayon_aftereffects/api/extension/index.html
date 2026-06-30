@@ -46,6 +46,18 @@
 
     <script type=text/javascript>
             $(function() {
+              $("a#version-up-workfile-button").bind("click", function() {
+
+                RPC.call('AfterEffects.version_up_workfile_route').then(function (data) {
+                }, function (error) {
+                    alert(error);
+                });
+              });
+            });
+    </script>
+
+    <script type=text/javascript>
+            $(function() {
               $("a#loader-button").bind("click", function() {
                 RPC.call('AfterEffects.loader_route').then(function (data) {
                 }, function (error) {
@@ -184,6 +196,7 @@
     <div id="content">
 
         <div><a href=# id=workfiles-button><button class="hostFontSize">Workfiles...</button></a></div>
+        <div><a href=# id=version-up-workfile-button><button class="hostFontSize">Version Up Workfile</button></a></div>
         <div><a href=# id=loader-button><button class="hostFontSize">Load...</button></a></div>
         <div><a href=# id=publish-button><button class="hostFontSize">Publish...</button></a></div>
         <div><a href=# id=sceneinventory-button><button class="hostFontSize">Manage...</button></a></div>
