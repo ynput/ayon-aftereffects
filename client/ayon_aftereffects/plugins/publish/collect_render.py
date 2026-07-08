@@ -35,7 +35,7 @@ class CollectAERender(publish.AbstractCollectRender):
     should be run only on renderable instances.)
     """
 
-    order = pyblish.api.CollectorOrder + 0.125
+    order = pyblish.api.CollectorOrder + 0.001
     label = "Collect After Effects Render Layers"
     hosts = ["aftereffects"]
 
