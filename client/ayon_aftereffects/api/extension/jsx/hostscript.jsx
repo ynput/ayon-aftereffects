@@ -556,28 +556,11 @@ function getRenderInfo(comp_id){
                 // stash the OM as a throw-away template before duplicate() and
                 // applyTemplate() on the new item. setSettings() is layered on
                 // top to carry any artist customizations.
-                var stored_om_settings = [];
-                var stashed_template_names = [];
                 for (j = 1; j<= render_item.numOutputModules; ++j){
                     var item = render_item.outputModule(j);
                     original_file_names.push(item.file);
-                    stored_om_settings.push(
-                        item.getSettings(GetSettingsFormat.STRING_SETTABLE)
-                    );
-                    var stash_name = "__ayon_om_stash_" + comp_id + "_" + j;
-                    try { item.saveAsTemplate(stash_name); } catch (e) {}
-                    stashed_template_names.push(stash_name);
                 }
-                var new_item = render_item.duplicate();
-                render_item.remove();  // remove existing to limit duplications
-                for (j = 1; j<= new_item.numOutputModules; ++j){
-                    var new_om = new_item.outputModule(j);
-                    try {
-                        new_om.applyTemplate(stashed_template_names[j-1]);
-                    } catch (e) {}
-                    // Layer specific settings on top of the restored template
-                    new_om.setSettings(stored_om_settings[j-1]);
-                }
+                render_item = duplicate_with_settings(render_item, comp_id);
                 continue;
             }
         }
@@ -1022,27 +1005,7 @@ function render(target_folder, comp_id) {
                 // Preserve Output Module config across duplicate(). See
                 // getRenderInfo() for the full rationale. Same template-stash
                 // + setSettings layering is used here.
-                var stored_om_settings = [];
-                var stashed_template_names = [];
-                for (var k = 1; k <= render_item.numOutputModules; ++k){
-                    var om_k = render_item.outputModule(k);
-                    stored_om_settings.push(
-                        om_k.getSettings(GetSettingsFormat.STRING_SETTABLE)
-                    );
-                    var stash_name = "__ayon_om_stash_" + comp_id + "_" + k;
-                    try { om_k.saveAsTemplate(stash_name); } catch (e) {}
-                    stashed_template_names.push(stash_name);
-                }
-                var new_item = render_item.duplicate();
-                render_item.remove();
-                for (var k = 1; k <= new_item.numOutputModules; ++k){
-                    var new_om_k = new_item.outputModule(k);
-                    try {
-                        new_om_k.applyTemplate(stashed_template_names[k-1]);
-                    } catch (e) {}
-                    new_om_k.setSettings(stored_om_settings[k-1]);
-                }
-                render_item = new_item;
+                render_item = duplicate_with_settings(render_item, comp_id);
             }
 
             render_item.render = true;
@@ -1140,6 +1103,45 @@ function addItemInstead(placeholder_item_id, item_id){
         }
     }
     app.endUndoGroup();
+}
+
+function duplicate_with_settings(render_item, comp_id) {
+    /**
+     * Duplicate a render queue item while preserving Output Module settings.
+     *
+     * AE's duplicate() resets Output Module config to user defaults.
+     * To survive a round-trip, we stash the OM as a throw-away template
+     * before duplicate() and applyTemplate() on the new item.
+     * setSettings() is layered on top to carry any artist customizations.
+     *
+     * Args:
+     *     render_item (RenderQueueItem): The render queue item to duplicate.
+     *     comp_id (int): Composition id used for template naming.
+     * Returns:
+     *     (RenderQueueItem): The new duplicated render queue item.
+     */
+    var stored_om_settings = [];
+    var stashed_template_names = [];
+    for (var j = 1; j <= render_item.numOutputModules; ++j) {
+        var om = render_item.outputModule(j);
+        stored_om_settings.push(
+            om.getSettings(GetSettingsFormat.STRING_SETTABLE)
+        );
+        var stash_name = "__ayon_om_stash_" + comp_id + "_" + j;
+        try { om.saveAsTemplate(stash_name); } catch (e) {}
+        stashed_template_names.push(stash_name);
+    }
+    var new_item = render_item.duplicate();
+    render_item.remove();  // remove existing to limit duplications
+    for (var j = 1; j <= new_item.numOutputModules; ++j) {
+        var new_om = new_item.outputModule(j);
+        try {
+            new_om.applyTemplate(stashed_template_names[j - 1]);
+        } catch (e) {}
+        // Layer specific settings on top of the restored template
+        new_om.setSettings(stored_om_settings[j - 1]);
+    }
+    return new_item;
 }
 
 function _prepareSingleValue(value){
