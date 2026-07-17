@@ -560,7 +560,7 @@ function getRenderInfo(comp_id){
                     var item = render_item.outputModule(j);
                     original_file_names.push(item.file);
                 }
-                render_item = duplicate_with_settings(render_item, comp_id);
+                render_item = _duplicate_with_settings(render_item);
                 continue;
             }
         }
@@ -1005,7 +1005,7 @@ function render(target_folder, comp_id) {
                 // Preserve Output Module config across duplicate(). See
                 // getRenderInfo() for the full rationale. Same template-stash
                 // + setSettings layering is used here.
-                render_item = duplicate_with_settings(render_item, comp_id);
+                render_item = _duplicate_with_settings(render_item);
             }
 
             render_item.render = true;
@@ -1105,40 +1105,33 @@ function addItemInstead(placeholder_item_id, item_id){
     app.endUndoGroup();
 }
 
-function duplicate_with_settings(render_item, comp_id) {
+function _duplicate_with_settings(render_item) {
     /**
      * Duplicate a render queue item while preserving Output Module settings.
      *
      * AE's duplicate() resets Output Module config to user defaults.
-     * To survive a round-trip, we stash the OM as a throw-away template
-     * before duplicate() and applyTemplate() on the new item.
-     * setSettings() is layered on top to carry any artist customizations.
+     * To survive a round-trip, we repply OM settings.
      *
      * Args:
      *     render_item (RenderQueueItem): The render queue item to duplicate.
-     *     comp_id (int): Composition id used for template naming.
      * Returns:
      *     (RenderQueueItem): The new duplicated render queue item.
      */
     var stored_om_settings = [];
-    var stashed_template_names = [];
     for (var j = 1; j <= render_item.numOutputModules; ++j) {
         var om = render_item.outputModule(j);
+        // Grab the full settings state
         stored_om_settings.push(
             om.getSettings(GetSettingsFormat.STRING_SETTABLE)
         );
-        var stash_name = "__ayon_om_stash_" + comp_id + "_" + j;
-        try { om.saveAsTemplate(stash_name); } catch (e) {}
-        stashed_template_names.push(stash_name);
     }
+
     var new_item = render_item.duplicate();
-    render_item.remove();  // remove existing to limit duplications
+    render_item.remove();  
+
     for (var j = 1; j <= new_item.numOutputModules; ++j) {
         var new_om = new_item.outputModule(j);
-        try {
-            new_om.applyTemplate(stashed_template_names[j - 1]);
-        } catch (e) {}
-        // Layer specific settings on top of the restored template
+        // Apply the exact settings state directly
         new_om.setSettings(stored_om_settings[j - 1]);
     }
     return new_item;
