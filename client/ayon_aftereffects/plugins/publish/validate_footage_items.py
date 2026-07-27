@@ -9,7 +9,6 @@ import pyblish.api
 from ayon_core.pipeline import (
     PublishXmlValidationError
 )
-from ayon_aftereffects.api import get_stub
 
 
 class ValidateFootageItems(pyblish.api.InstancePlugin):
@@ -35,8 +34,7 @@ class ValidateFootageItems(pyblish.api.InstancePlugin):
         """Plugin entry point."""
 
         comp_id = instance.data["comp_id"]
-        for footage_item in get_stub().get_items(
-                comps=False, folders=False, footages=True):
+        for footage_item in instance.context.data["footageItems"]:
             self.log.debug(f"Validating footage item: {footage_item.name}")
             if comp_id not in footage_item.containing_comps:
                 continue
