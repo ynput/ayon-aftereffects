@@ -61,7 +61,7 @@ AE_PUBLISH_PLUGINS_DEFAULTS = {
         ]
     },
     "ValidateFootageLocation": {
-        "enabled": True,
+        "enabled": False,
         "optional": True,
         "active": True
     },
