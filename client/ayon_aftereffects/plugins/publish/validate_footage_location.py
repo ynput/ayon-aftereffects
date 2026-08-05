@@ -20,7 +20,7 @@ from ayon_aftereffects.api import get_stub
 class SelectInvalidFootageAction(pyblish.api.Action):
     """Select the offending FootageItems in the AE Project panel.
 
-    The invalid items are recomputed on every click, so footage relinked
+    Refreshes the collected footage before recomputing, so footage relinked
     since the validation failed is no longer selected, and footage deleted
     in the meantime is skipped instead of raising.
     """
@@ -33,10 +33,16 @@ class SelectInvalidFootageAction(pyblish.api.Action):
         if plugin not in get_errored_plugins_from_context(context):
             return
 
+        stub = get_stub()
+        # re-query so the recompute reflects the current project state
+        context.data["footageItems"] = stub.get_items(
+            comps=False, folders=False, footages=True
+        )
+
         invalid = plugin.get_invalid(context)
         self.log.info(f"Selecting {len(invalid)} invalid footage item(s).")
         # an empty list deselects everything
-        get_stub().select_items([item.id for item in invalid])
+        stub.select_items([item.id for item in invalid])
 
 
 class ValidateFootageLocation(
@@ -61,28 +67,20 @@ class ValidateFootageLocation(
     active = True
 
     @classmethod
-    def get_invalid(cls, context, footage_items=None):
+    def get_invalid(cls, context):
         """Return footage items stored outside of the project roots.
 
         Args:
             context (pyblish.api.Context): Publish context, provides
-                "anatomy".
-            footage_items (Optional[list[AEItem]]): Footage items to check.
-                Queried from After Effects when not provided, which is how
-                the select action recomputes them live.
+                "anatomy" and "footageItems".
 
         Returns:
             list[AEItem]: Footage items outside of the project roots.
         """
-        if footage_items is None:
-            footage_items = get_stub().get_items(
-                comps=False, folders=False, footages=True
-            )
-
         anatomy = context.data["anatomy"]
 
         invalid = []
-        for item in footage_items:
+        for item in context.data["footageItems"]:
             # solids, placeholders and generated sources have no file
             if not item.path:
                 continue
@@ -96,7 +94,7 @@ class ValidateFootageLocation(
         if not self.is_active(context.data):
             return
 
-        invalid = self.get_invalid(context, context.data["footageItems"])
+        invalid = self.get_invalid(context)
         if not invalid:
             return
 
