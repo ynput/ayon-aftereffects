@@ -25,7 +25,7 @@ class ValidateSceneSettingsModel(BaseSettingsModel):
 class ValidateFootageLocationModel(BaseSettingsModel):
     """Validate footage is stored inside the project roots"""
 
-    enabled: bool = SettingsField(True, title="Enabled")
+    enabled: bool = SettingsField(False, title="Enabled")
     optional: bool = SettingsField(True, title="Optional")
     active: bool = SettingsField(True, title="Active")
 
@@ -59,10 +59,5 @@ AE_PUBLISH_PLUGINS_DEFAULTS = {
         "skip_timelines_check": [
             ".*"
         ]
-    },
-    "ValidateFootageLocation": {
-        "enabled": False,
-        "optional": True,
-        "active": True
     },
 }

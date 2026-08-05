@@ -13,7 +13,7 @@ class CollectFootageItems(pyblish.api.ContextPlugin):
     """
 
     label = "Collect After Effects Footage Items"
-    order = pyblish.api.CollectorOrder - 0.4
+    order = pyblish.api.CollectorOrder - 0.5
     hosts = ["aftereffects"]
 
     def process(self, context):
