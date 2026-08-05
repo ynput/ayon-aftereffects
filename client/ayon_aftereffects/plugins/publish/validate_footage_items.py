@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Validate presence of footage items in composition
 Requires:
+    context -> footageItems
 """
 import os
 
@@ -35,9 +36,10 @@ class ValidateFootageItems(pyblish.api.InstancePlugin):
 
         comp_id = instance.data["comp_id"]
         for footage_item in instance.context.data["footageItems"]:
-            self.log.debug(f"Validating footage item: {footage_item.name}")
             if comp_id not in footage_item.containing_comps:
                 continue
+
+            self.log.debug(f"Validating footage item: {footage_item.name}")
 
             path = footage_item.path
             if path and not os.path.exists(path):

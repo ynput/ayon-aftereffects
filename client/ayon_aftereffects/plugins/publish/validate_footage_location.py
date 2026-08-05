@@ -3,7 +3,6 @@
 
 Requires:
     context -> anatomy
-    context -> footageItems
 """
 
 import pyblish.api
@@ -20,7 +19,7 @@ from ayon_aftereffects.api import get_stub
 class SelectInvalidFootageAction(pyblish.api.Action):
     """Select the offending FootageItems in the AE Project panel.
 
-    Refreshes the collected footage before recomputing, so footage relinked
+    The invalid items are recomputed on every click, so footage relinked
     since the validation failed is no longer selected, and footage deleted
     in the meantime is skipped instead of raising.
     """
@@ -33,16 +32,10 @@ class SelectInvalidFootageAction(pyblish.api.Action):
         if plugin not in get_errored_plugins_from_context(context):
             return
 
-        stub = get_stub()
-        # re-query so the recompute reflects the current project state
-        context.data["footageItems"] = stub.get_items(
-            comps=False, folders=False, footages=True
-        )
-
         invalid = plugin.get_invalid(context)
         self.log.info(f"Selecting {len(invalid)} invalid footage item(s).")
         # an empty list deselects everything
-        stub.select_items([item.id for item in invalid])
+        get_stub().select_items([item.id for item in invalid])
 
 
 class ValidateFootageLocation(
@@ -54,6 +47,11 @@ class ValidateFootageLocation(
     drive) is not reachable from the render farm or from other artists'
     machines. AE fails silently on unreachable footage, so the farm render
     produces missing frames with no error.
+
+    Scoped to the whole project on purpose, unlike `ValidateFootageItems`.
+    AE's `usedIn`, which feeds `AEItem.containing_comps`, is undocumented
+    for nested precomps, so filtering by comp could silently miss footage
+    inside one. The whole project is a guaranteed superset.
     """
 
     order = pyblish.api.ValidatorOrder
@@ -72,15 +70,18 @@ class ValidateFootageLocation(
 
         Args:
             context (pyblish.api.Context): Publish context, provides
-                "anatomy" and "footageItems".
+                "anatomy".
 
         Returns:
             list[AEItem]: Footage items outside of the project roots.
         """
         anatomy = context.data["anatomy"]
+        footage_items = get_stub().get_items(
+            comps=False, folders=False, footages=True
+        )
 
         invalid = []
-        for item in context.data["footageItems"]:
+        for item in footage_items:
             # solids, placeholders and generated sources have no file
             if not item.path:
                 continue
@@ -98,16 +99,13 @@ class ValidateFootageLocation(
         if not invalid:
             return
 
-        msg = "{} footage item(s) stored outside of project roots:\n{}".format(
-            len(invalid),
-            "\n".join(f"- {item.name}: {item.path}" for item in invalid),
+        invalid_str = "\n".join(
+            f"- {item.name}: {item.path}" for item in invalid
         )
-
-        formatting_data = {
-            "invalid_footage_str": "<br/>".join(
-                f"<b>{item.name}</b>: {item.path}" for item in invalid
-            )
-        }
+        msg = (
+            f"{len(invalid)} footage item(s) stored outside of project "
+            f"roots:\n{invalid_str}"
+        )
         raise PublishXmlValidationError(
-            self, msg, formatting_data=formatting_data
+            self, msg, formatting_data={"invalid_footage_str": invalid_str}
         )
