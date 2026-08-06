@@ -34,7 +34,7 @@ class CollectAERender(publish.AbstractCollectRender):
     This must run after `collect_review`, but before Deadline plugins (which
     should be run only on renderable instances.)
     """
-
+    # Must run after core CollectSceneVersion
     order = pyblish.api.CollectorOrder + 0.001
     label = "Collect After Effects Render Layers"
     hosts = ["aftereffects"]
