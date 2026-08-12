@@ -194,15 +194,23 @@ function selectItems(items){
      * Args:
      *      items (list)
      */
-    for (i = 1; i <= app.project.items.length; ++i){
-        item = app.project.items[i];
-        if (items.indexOf(item.id) > -1){
-            item.selected = true;
-        }else{
-            item.selected = false;
-        }
+    // AE takes ~8ms per select, only write when the state actually differs
+    var wanted = {};
+    for (var i = 0; i < items.length; ++i){
+        wanted[items[i]] = true;
     }
 
+    var count = app.project.items.length;
+    for (var i = 1; i <= count; ++i){
+        var item = app.project.items[i];
+        if (!item){
+            continue;
+        }
+        var select = wanted[item.id] === true;
+        if (item.selected !== select){
+            item.selected = select;
+        }
+    }
 }
 
 function getSelectedItems(comps, folders, footages){
@@ -235,6 +243,9 @@ function _getItem(item, comps, folders, footages){
      * Auxiliary function as project items and selections
      * are indexed in different way :/
      * Refactor
+     *
+     * Returns null when the item type was not asked for, so callers can
+     * skip it instead of shipping an empty record over the socket.
      */
     var item_type = '';
     var path = '';
@@ -242,27 +253,30 @@ function _getItem(item, comps, folders, footages){
     if (item instanceof FolderItem){
         item_type = 'folder';
         if (!folders){
-            return "{}";
+            return null;
         }
     }
     if (item instanceof FootageItem){
         if (!footages){
-            return "{}";
+            return null;
         }
         item_type = 'footage';
         if (item.file){
             path = item.file.fsName;
         }
-        if (item.usedIn){
-            for (j = 0; j < item.usedIn.length; ++j){
-                containing_comps.push(item.usedIn[j].id);
+        // AE re-resolves usedIn on every read, so read it once here
+        // instead of inside the loop below
+        var used_in = item.usedIn;
+        if (used_in){
+            for (j = 0; j < used_in.length; ++j){
+                containing_comps.push(used_in[j].id);
             }
         }
     }
     if (item instanceof CompItem){
         item_type = 'comp';
         if (!comps){
-            return "{}";
+            return null;
         }
     }
 
