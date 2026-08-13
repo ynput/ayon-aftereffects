@@ -19,7 +19,7 @@ class ExtractSaveScene(pyblish.api.InstancePlugin):
         stub = get_stub()
         representation = instance.data["representations"][0]
 
-        comp_items =  stub.get_items(
+        comp_items = stub.get_items(
             comps=True,
             folders=False,
             footages=False
