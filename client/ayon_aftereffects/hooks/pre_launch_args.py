@@ -4,12 +4,12 @@ import os
 import platform
 import subprocess
 
+from ayon_aftereffects import get_launch_script_path
+from ayon_applications import LaunchTypes, PreLaunchHook
 from ayon_core.lib import (
     get_ayon_launcher_args,
     is_using_ayon_console,
 )
-from ayon_applications import PreLaunchHook, LaunchTypes
-from ayon_aftereffects import get_launch_script_path
 
 
 def get_launch_kwargs(kwargs):

@@ -1,17 +1,11 @@
 import re
 
-from ayon_core.lib import BoolDef, UISeparatorDef, EnumDef
-from ayon_core.pipeline import (
-    Creator,
-    CreatedInstance,
-    CreatorError
-)
-from ayon_core.lib import prepare_template_data
-from ayon_core.pipeline.create import PRODUCT_NAME_ALLOWED_SYMBOLS
-
 from ayon_aftereffects import api
-from ayon_aftereffects.api.pipeline import cache_and_get_instances
 from ayon_aftereffects.api.lib import set_settings
+from ayon_aftereffects.api.pipeline import cache_and_get_instances
+from ayon_core.lib import BoolDef, EnumDef, UISeparatorDef, prepare_template_data
+from ayon_core.pipeline import CreatedInstance, Creator, CreatorError
+from ayon_core.pipeline.create import PRODUCT_NAME_ALLOWED_SYMBOLS
 
 
 class RenderCreator(Creator):
@@ -30,7 +24,7 @@ class RenderCreator(Creator):
 
     create_allow_context_change = True
 
-    rendering_targets = {
+    rendering_targets = {  # noqa: RUF012
         "local": "Local machine rendering",
         "farm": "Farm rendering",
         "frames": "Use existing frames"
@@ -75,7 +69,7 @@ class RenderCreator(Creator):
 
         for comp in comps:
             composition_name = re.sub(
-                "[^{}]+".format(PRODUCT_NAME_ALLOWED_SYMBOLS),
+                f"[^{PRODUCT_NAME_ALLOWED_SYMBOLS}]+",
                 "",
                 comp.name
             )

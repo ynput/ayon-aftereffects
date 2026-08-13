@@ -1,37 +1,32 @@
-import os
-import sys
-import subprocess
-import collections
 import asyncio
+import collections
 import functools
+import os
+import subprocess
+import sys
 import traceback
 
-from wsrpc_aiohttp import (
-    WebSocketRoute,
-    WebSocketAsync
-)
-
-from qtpy import QtCore
-
+import ayon_api
+from ayon_core.addon import AddonsManager
 from ayon_core.lib import (
     Logger,
-    is_in_tests,
-    env_value_to_bool,
-    register_event_callback,
     emit_event,
+    env_value_to_bool,
+    is_in_tests,
+    register_event_callback,
 )
-import ayon_api
 from ayon_core.pipeline import install_host
-from ayon_core.addon import AddonsManager
-from ayon_core.tools.utils import get_ayon_qt_app
 from ayon_core.pipeline.context_tools import get_current_context
 from ayon_core.pipeline.workfile import save_next_version
+from ayon_core.tools.utils import get_ayon_qt_app
+from qtpy import QtCore
+from wsrpc_aiohttp import WebSocketAsync, WebSocketRoute
 
 from ayon_aftereffects.api import ae_host_tools
 
+from .lib import raise_window_to_front, set_settings
 from .webserver import WebServerTool
 from .ws_stub import get_stub
-from .lib import raise_window_to_front, set_settings
 
 log = Logger.get_logger(__name__)
 
@@ -121,7 +116,7 @@ def main(*subprocess_args):
     env_workfiles_on_launch = os.getenv(
         "AYON_AFTEREFFECTS_WORKFILES_ON_LAUNCH",
         # Backwards compatibility
-        os.getenv("AVALON_AFTEREFFECTS_WORKFILES_ON_LAUNCH", True)
+        os.getenv("AVALON_AFTEREFFECTS_WORKFILES_ON_LAUNCH", "1")
     )
     workfiles_on_launch = env_value_to_bool(value=env_workfiles_on_launch)
 
@@ -184,13 +179,13 @@ def show_script_editor():
 class ProcessLauncher(QtCore.QObject):
     """Launches webserver, connects to it, runs main thread."""
     route_name = "AfterEffects"
-    _main_thread_callbacks = collections.deque()
+    _main_thread_callbacks = collections.deque()  # noqa: RUF012
 
     def __init__(self, subprocess_args):
         self._subprocess_args = subprocess_args
         self._log = None
 
-        super(ProcessLauncher, self).__init__()
+        super().__init__()
 
         # Keep track if launcher was already started
         self._started = False
@@ -218,8 +213,7 @@ class ProcessLauncher(QtCore.QObject):
     @property
     def log(self):
         if self._log is None:
-            self._log = Logger.get_logger("{}-launcher".format(
-                self.route_name))
+            self._log = Logger.get_logger(f"{self.route_name}-launcher")
         return self._log
 
     @property
@@ -244,7 +238,7 @@ class ProcessLauncher(QtCore.QObject):
             _stub = get_stub()
             if _stub:
                 return True
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
         return None
@@ -344,7 +338,7 @@ class ProcessLauncher(QtCore.QObject):
         websocket_server.add_route("*", "/ws/", WebSocketAsync)
         # Add after effects route to websocket handler
 
-        self.log.info("Adding {} route".format(self.route_name))
+        self.log.info(f"Adding {self.route_name} route")
         WebSocketAsync.add_route(
             self.route_name, AfterEffectsRoute
         )
@@ -390,9 +384,7 @@ class ProcessLauncher(QtCore.QObject):
         # Pass along the resulting websocket URL to the host process.
         # It may have been changed by the port finding logic.
         environ = os.environ.copy()
-        environ["WEBSOCKET_URL"] = "ws://localhost:{}/ws/".format(
-            self._websocket_server.port
-        )
+        environ["WEBSOCKET_URL"] = f"ws://localhost:{self._websocket_server.port}/ws/"
         try:
             self._process = subprocess.Popen(
                 self._subprocess_args,
@@ -443,7 +435,7 @@ class AfterEffectsRoute(WebSocketRoute):
                 task (str)
         """
         log.info("Setting context change")
-        log.info("project {} folder {} ".format(project, folder))
+        log.info(f"project {project} folder {folder} ")
         if project:
             os.environ["AYON_PROJECT_NAME"] = project
         if folder:
@@ -517,8 +509,7 @@ class AfterEffectsRoute(WebSocketRoute):
         return "nothing"
 
     def create_placeholder_route(self):
-        from ayon_aftereffects.api.workfile_template_builder import \
-            create_placeholder
+        from ayon_aftereffects.api.workfile_template_builder import create_placeholder
         partial_method = functools.partial(create_placeholder)
 
         ProcessLauncher.execute_in_main_thread(partial_method)
@@ -527,8 +518,7 @@ class AfterEffectsRoute(WebSocketRoute):
         return "nothing"
 
     def update_placeholder_route(self):
-        from ayon_aftereffects.api.workfile_template_builder import \
-            update_placeholder
+        from ayon_aftereffects.api.workfile_template_builder import update_placeholder
         partial_method = functools.partial(update_placeholder)
 
         ProcessLauncher.execute_in_main_thread(partial_method)
@@ -537,8 +527,9 @@ class AfterEffectsRoute(WebSocketRoute):
         return "nothing"
 
     def build_workfile_template_route(self):
-        from ayon_aftereffects.api.workfile_template_builder import \
-            build_workfile_template
+        from ayon_aftereffects.api.workfile_template_builder import (
+            build_workfile_template,
+        )
         partial_method = functools.partial(build_workfile_template)
 
         ProcessLauncher.execute_in_main_thread(partial_method)

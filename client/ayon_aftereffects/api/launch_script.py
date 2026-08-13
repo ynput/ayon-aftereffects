@@ -16,8 +16,8 @@ CURRENT_FILE = os.path.abspath(__file__)
 
 def show_error_messagebox(title, message, detail_message=None):
     """Function will show message and process ends after closing it."""
-    from qtpy import QtWidgets, QtCore
     from ayon_core import style
+    from qtpy import QtCore, QtWidgets
 
     app = QtWidgets.QApplication([])
     app.setStyleSheet(style.load_stylesheet())
@@ -53,10 +53,7 @@ def on_invalid_args(script_not_found):
         submsg = "Expected Host executable after script path:\n\"{}\""
 
     message = "BUG: Got invalid arguments so can't launch Host application."
-    detail_message = "Process was launched with arguments:\n{}\n\n{}".format(
-        joined_args,
-        submsg.format(CURRENT_FILE)
-    )
+    detail_message = f"Process was launched with arguments:\n{joined_args}\n\n{submsg.format(CURRENT_FILE)}"
 
     show_error_messagebox(title, message, detail_message)
 

@@ -4,43 +4,30 @@ Anything that isn't defined here is INTERNAL and unreliable for external use.
 
 """
 
+from .lib import (
+    get_entity_attributes,
+    get_extension_manifest_path,
+    maintained_selection,
+    set_settings,
+)
+from .pipeline import AfterEffectsHost, containerise, ls
+from .plugin import AfterEffectsLoader
 from .ws_stub import (
     get_stub,
 )
 
-from .pipeline import (
-    AfterEffectsHost,
-    ls,
-    containerise
-)
-
-from .lib import (
-    maintained_selection,
-    get_extension_manifest_path,
-    get_entity_attributes,
-    set_settings
-)
-
-from .plugin import (
-    AfterEffectsLoader
-)
-
-
 __all__ = [
-    # ws_stub
-    "get_stub",
-
     # pipeline
     "AfterEffectsHost",
-    "ls",
+    # plugin
+    "AfterEffectsLoader",
     "containerise",
-
+    "get_entity_attributes",
+    "get_extension_manifest_path",
+    # ws_stub
+    "get_stub",
+    "ls",
     # lib
     "maintained_selection",
-    "get_extension_manifest_path",
-    "get_entity_attributes",
-    "set_settings",
-
-    # plugin
-    "AfterEffectsLoader"
+    "set_settings"
 ]

@@ -1,9 +1,9 @@
 import re
-
-from ayon_core.pipeline import get_representation_path
+from typing import ClassVar
 
 from ayon_aftereffects import api
 from ayon_aftereffects.api.lib import get_background_layers
+from ayon_core.pipeline import get_representation_path
 
 
 class BackgroundLoader(api.AfterEffectsLoader):
@@ -17,10 +17,10 @@ class BackgroundLoader(api.AfterEffectsLoader):
         metadata
     """
     label = "Load JSON Background"
-    product_base_types = {"background"}
-    product_types = product_base_types
-    representations = {"*"}
-    extensions = {"json"}
+    product_base_types: ClassVar[set[str]] = {"background"}
+    product_types: ClassVar[set[str]] = product_base_types
+    representations: ClassVar[set[str]] = {"*"}
+    extensions: ClassVar[set[str]] = {"json"}
 
     def load(self, context, name=None, namespace=None, data=None):
         stub = self.get_stub()
@@ -33,7 +33,7 @@ class BackgroundLoader(api.AfterEffectsLoader):
         path = self.filepath_from_context(context)
         layers = get_background_layers(path)
         if not layers:
-            raise ValueError("No layers found in {}".format(path))
+            raise ValueError(f"No layers found in {path}")
 
         loaded_item = stub.import_background(
             None, stub.LOADED_ICON + loaded_item_name, layers

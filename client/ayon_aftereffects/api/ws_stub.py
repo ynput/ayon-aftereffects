@@ -16,7 +16,7 @@ class ConnectionNotEstablishedYet(Exception):
 
 
 @attr.s
-class AEItem(object):
+class AEItem:
     """
         Object denoting Item in AE. Each item is created in AE by any Loader,
         but contains same fields, which are being used in later processing.
@@ -43,7 +43,7 @@ class AEItem(object):
     containing_comps = attr.ib(factory=list)
 
 
-class AfterEffectsServerStub():
+class AfterEffectsServerStub:
     """Stub for calling function on client (After Effects js) side.
 
     Expects that client is already connected (started when AYON menu is opened)
@@ -191,7 +191,7 @@ class AfterEffectsServerStub():
         cleaned_data = []
         for meta in result_meta:
             # do not added instance with nonexistend item id
-            if meta.get("members"):
+            if meta.get("members"):  # noqa: SIM102
                 if int(meta["members"][0]) not in item_ids:
                     continue
 
@@ -623,8 +623,8 @@ class AfterEffectsServerStub():
         """
         res = self.websocketserver.call_on_client(
             self,
-            "AfterEffects.add_item_instead_placeholder",  # noqa
-            placeholder_item_id=placeholder_item_id,  # noqa
+            "AfterEffects.add_item_instead_placeholder",
+            placeholder_item_id=placeholder_item_id,
             item_id=item_id,
         )
 
@@ -733,7 +733,7 @@ class AfterEffectsServerStub():
             try:
                 parsed = json.loads(res)
             except json.decoder.JSONDecodeError:
-                raise ValueError("Received broken JSON {}".format(res))
+                raise ValueError(f"Received broken JSON {res}")
 
             if not parsed:  # empty list
                 return parsed
@@ -766,7 +766,7 @@ class AfterEffectsServerStub():
             try:
                 payload = json.loads(payload)
             except json.decoder.JSONDecodeError:
-                raise ValueError("Received broken JSON {}".format(payload))
+                raise ValueError(f"Received broken JSON {payload}")
 
         if isinstance(payload, dict):
             payload = [payload]

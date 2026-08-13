@@ -1,11 +1,11 @@
-from pathlib import Path
-from zipfile import ZipFile
 import xml.etree.ElementTree as ET
+from pathlib import Path
 from shutil import rmtree
-import platformdirs
+from zipfile import ZipFile
 
+import platformdirs
 from ayon_aftereffects import AFTEREFFECTS_ADDON_ROOT
-from ayon_applications import PreLaunchHook, LaunchTypes
+from ayon_applications import LaunchTypes, PreLaunchHook
 
 
 class InstallAyonExtensionToAfterEffect(PreLaunchHook):
@@ -17,10 +17,10 @@ class InstallAyonExtensionToAfterEffect(PreLaunchHook):
     Will compare versions if folder does exist, replacing if mismatched.
     """
 
-    app_groups = {"aftereffects"}
+    app_groups = {"aftereffects"}  # noqa: RUF012
 
     order = 1
-    launch_types = {LaunchTypes.local}
+    launch_types = {LaunchTypes.local}  # noqa: RUF012
 
     def execute(self):
         try:
@@ -31,7 +31,7 @@ class InstallAyonExtensionToAfterEffect(PreLaunchHook):
 
         except Exception:
             self.log.warning(
-                "Processing of {} crashed.".format(self.__class__.__name__),
+                f"Processing of {self.__class__.__name__} crashed.",
                 exc_info=True,
             )
 

@@ -1,9 +1,6 @@
-from ayon_core.pipeline import (
-    AutoCreator,
-    CreatedInstance
-)
 from ayon_aftereffects import api
 from ayon_aftereffects.api.pipeline import cache_and_get_instances
+from ayon_core.pipeline import AutoCreator, CreatedInstance
 
 
 class AEWorkfileCreator(AutoCreator):

@@ -3,8 +3,8 @@ import platform
 import re
 from pathlib import Path
 
-from ayon_applications import PreLaunchHook, LaunchTypes
 from ayon_aftereffects import AFTEREFFECTS_ADDON_ROOT
+from ayon_applications import LaunchTypes, PreLaunchHook
 
 
 class OpenPanelOnFirstLaunch(PreLaunchHook):
@@ -15,9 +15,9 @@ class OpenPanelOnFirstLaunch(PreLaunchHook):
     If it does not within 5 seconds, it calls executeCommand to open it.
     """
 
-    app_groups = {"aftereffects"}
+    app_groups = {"aftereffects"}  # noqa: RUF012
     order = 15
-    launch_types = {LaunchTypes.local}
+    launch_types = {LaunchTypes.local}  # noqa: RUF012
 
     def execute(self):
         # The panel (JavaScript) cannot read AYON settings directly, so the

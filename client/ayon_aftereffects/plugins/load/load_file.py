@@ -1,7 +1,8 @@
 import re
+from typing import ClassVar
 
-from ayon_aftereffects import api
 import ayon_api
+from ayon_aftereffects import api
 
 
 class FileLoader(api.AfterEffectsLoader):
@@ -11,7 +12,7 @@ class FileLoader(api.AfterEffectsLoader):
     """
     label = "Load file"
 
-    product_base_types = {
+    product_base_types: ClassVar[set[str]] = {
         "image",
         "plate",
         "render",
@@ -20,8 +21,8 @@ class FileLoader(api.AfterEffectsLoader):
         "audio",
         "workfile",
     }
-    product_types = product_base_types
-    representations = {"*"}
+    product_types: ClassVar[set[str]] = product_base_types
+    representations: ClassVar[set[str]] = {"*"}
 
     def load(self, context, name=None, namespace=None, options=None):
         stub = self.get_stub()
