@@ -36,7 +36,7 @@ class CollectAERender(publish.AbstractCollectRender):
     should be run only on renderable instances.)
     """
     # Must run after core CollectSceneVersion
-    order = pyblish.api.CollectorOrder + 0.001
+    order = pyblish.api.CollectorOrder - 0.45
     label = "Collect After Effects Render Layers"
     hosts = ["aftereffects"]
 
@@ -62,7 +62,6 @@ class CollectAERender(publish.AbstractCollectRender):
         app_version = app_version[0:4]
 
         current_file = context.data["currentFile"]
-        version = -1
 
         project_entity = context.data["projectEntity"]
 
@@ -79,7 +78,6 @@ class CollectAERender(publish.AbstractCollectRender):
             if product_base_type != "render":
                 continue
 
-            version = inst.data.get("version", version)
             comp_id = int(inst.data["members"][0])
             comp_info = stub.get_comp_properties(comp_id)
 
@@ -113,7 +111,7 @@ class CollectAERender(publish.AbstractCollectRender):
                 productBaseType=product_base_type,
                 family=product_base_type,
                 families=instance_families,
-                version=version,
+                version=inst.data["version"],
                 time="",
                 source=current_file,
                 label=f"{product_name} - {product_base_type}",

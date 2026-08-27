@@ -10,8 +10,10 @@ class CollectSyncWorkfileVersion(pyblish.api.InstancePlugin):
     order = pyblish.api.CollectorOrder + 0.001
     label = "Collect Sync Workfile Version"
     hosts = ["aftereffects"]
+    families = ["aftereffects.add.context.version"]
 
     settings_category = "aftereffects"
 
     def process(self, instance: pyblish.api.Instance):
-        instance.data['version'] = instance.context.data['version']
+        if instance.data.get("version") is None:
+            instance.data["version"] = instance.context.data["version"]
