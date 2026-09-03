@@ -97,6 +97,10 @@ class RenderCreator(Creator):
 
             data["members"] = [comp.id]
             data["creator_attributes"] = creator_attributes
+            families = self.get_publish_families()
+            if families:
+                data["families"] = families
+
             if self.rename_comp_to_product_name:
                 data["orig_comp_name"] = composition_name
 
@@ -219,6 +223,11 @@ class RenderCreator(Creator):
                 instance = CreatedInstance.from_existing(
                     instance_data, self
                 )
+                families = self.get_published_families()
+                for family in families:
+                    if family not in instance_data["families"]:
+                        instance_data["families"].append(family)
+
                 self._add_instance_to_context(instance)
 
     def update_instances(self, update_list):
@@ -327,3 +336,6 @@ class RenderCreator(Creator):
                 instance_data["creator_attributes"]["render_target"] = "local"
 
         return instance_data
+
+    def get_published_families(self):
+        return ["render", "aftereffects.add.context.version"]
