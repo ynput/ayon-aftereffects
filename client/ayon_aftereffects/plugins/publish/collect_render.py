@@ -104,6 +104,9 @@ class CollectAERender(publish.AbstractCollectRender):
             instance_families = inst.data.get("families", [])
             if product_base_type not in instance_families:
                 instance_families.append(product_base_type)
+            instance_families.append(
+                "aftereffects.add.context.version"
+            )
             product_name = inst.data["productName"]
 
             instance = AERenderInstance(
