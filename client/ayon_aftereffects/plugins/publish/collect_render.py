@@ -35,8 +35,8 @@ class CollectAERender(publish.AbstractCollectRender):
     This must run after `collect_review`, but before Deadline plugins (which
     should be run only on renderable instances.)
     """
-
-    order = pyblish.api.CollectorOrder + 0.125
+    # Must run after core CollectSceneVersion
+    order = pyblish.api.CollectorOrder - 0.45
     label = "Collect After Effects Render Layers"
     hosts = ["aftereffects"]
 
@@ -62,7 +62,6 @@ class CollectAERender(publish.AbstractCollectRender):
         app_version = app_version[0:4]
 
         current_file = context.data["currentFile"]
-        version = context.data["version"]
 
         project_entity = context.data["projectEntity"]
 
@@ -105,6 +104,9 @@ class CollectAERender(publish.AbstractCollectRender):
             instance_families = inst.data.get("families", [])
             if product_base_type not in instance_families:
                 instance_families.append(product_base_type)
+            instance_families.append(
+                "aftereffects.add.context.version"
+            )
             product_name = inst.data["productName"]
 
             instance = AERenderInstance(
@@ -112,7 +114,7 @@ class CollectAERender(publish.AbstractCollectRender):
                 productBaseType=product_base_type,
                 family=product_base_type,
                 families=instance_families,
-                version=version,
+                version=inst.data["version"],
                 time="",
                 source=current_file,
                 label=f"{product_name} - {product_base_type}",
