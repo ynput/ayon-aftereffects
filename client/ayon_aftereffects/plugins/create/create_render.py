@@ -219,11 +219,6 @@ class RenderCreator(Creator):
                 instance = CreatedInstance.from_existing(
                     instance_data, self
                 )
-                families = self.get_published_families()
-                for family in families:
-                    if family not in instance_data["families"]:
-                        instance_data["families"].append(family)
-
                 self._add_instance_to_context(instance)
 
     def update_instances(self, update_list):
