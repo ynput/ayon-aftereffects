@@ -332,6 +332,3 @@ class RenderCreator(Creator):
                 instance_data["creator_attributes"]["render_target"] = "local"
 
         return instance_data
-
-    def get_published_families(self):
-        return ["render", "aftereffects.add.context.version"]
