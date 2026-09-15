@@ -97,10 +97,6 @@ class RenderCreator(Creator):
 
             data["members"] = [comp.id]
             data["creator_attributes"] = creator_attributes
-            families = self.get_publish_families()
-            if families:
-                data["families"] = families
-
             if self.rename_comp_to_product_name:
                 data["orig_comp_name"] = composition_name
 
