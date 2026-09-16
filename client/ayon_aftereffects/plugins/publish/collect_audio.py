@@ -5,14 +5,14 @@ import pyblish.api
 from ayon_aftereffects.api import get_stub
 
 
-class CollectAudio(pyblish.api.ContextPlugin):
+class CollectFootageAudio(pyblish.api.ContextPlugin):
     """Inject audio file url for rendered composition into context.
         Needs to run AFTER 'collect_render'. Use collected comp_id to check
         if there is an AVLayer in this composition
     """
 
     order = pyblish.api.CollectorOrder + 0.499
-    label = "Collect Audio"
+    label = "Collect Footage Audio"
     hosts = ["aftereffects"]
 
     def process(self, context):
