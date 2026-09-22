@@ -40,6 +40,7 @@ class RenderCreator(Creator):
     mark_for_review = True
     force_setting_values = True
     rename_comp_to_product_name = True
+    sync_with_render_queue = False
 
     def create(self, product_name, data, pre_create_data):
         stub = api.get_stub()  # only after After Effects is up
@@ -204,6 +205,7 @@ class RenderCreator(Creator):
             )
 
     def collect_instances(self):
+        instances_by_comp_id = {}
         for instance_data in cache_and_get_instances(self):
             creator_id = instance_data.get("creator_identifier")
             if not creator_id:
@@ -220,6 +222,115 @@ class RenderCreator(Creator):
                     instance_data, self
                 )
                 self._add_instance_to_context(instance)
+                members = instance.data.get("members")
+                if members:
+                    instances_by_comp_id[int(members[0])] = instance
+
+        if self.sync_with_render_queue:
+            self._sync_with_render_queue(instances_by_comp_id)
+
+    def _sync_with_render_queue(self, instances_by_comp_id):
+        """Mirror the After Effects render queue into created instances.
+
+        Compositions queued directly in After Effects gain an instance, and
+        instances whose composition left the queue are dropped.
+
+        Args:
+            instances_by_comp_id (dict[int, CreatedInstance]): Already
+                collected instances keyed by the composition they publish.
+        """
+        try:
+            queued_comps = api.get_stub().get_render_queue_comps()
+        except Exception:
+            # Publisher reset must survive a disconnected or wedged AE
+            self.log.warning(
+                "Cannot read render queue, skipping sync.", exc_info=True
+            )
+            return
+
+        queued_by_comp_id = {int(comp.id): comp for comp in queued_comps}
+
+        for comp_id, comp in queued_by_comp_id.items():
+            if comp_id not in instances_by_comp_id:
+                self._create_instance_for_queued_comp(comp)
+
+        for comp_id, instance in instances_by_comp_id.items():
+            if comp_id in queued_by_comp_id:
+                continue
+            self.log.info(
+                f"Composition {comp_id} left the render queue, "
+                "removing its instance."
+            )
+            self._remove_instance_from_context(instance)
+            self.host.remove_instance(instance)
+
+    def _create_instance_for_queued_comp(self, comp):
+        """Create a render instance for a composition found in the queue.
+
+        Variant is the composition name, cleaned of characters that are not
+        allowed in product names. Folder and task come from the current
+        context, as the queue carries no publish context of its own.
+
+        Args:
+            comp (AEItem): Composition record from the render queue.
+        """
+        variant = re.sub(
+            "[^{}]+".format(PRODUCT_NAME_ALLOWED_SYMBOLS),
+            "",
+            comp.name
+        )
+        if not variant:
+            self.log.warning(
+                f"Cannot build a variant from composition name '{comp.name}', "
+                "skipping."
+            )
+            return
+
+        project_name = self.create_context.get_current_project_name()
+        folder_entity = self.create_context.get_current_folder_entity()
+        if not (project_name and folder_entity):
+            self.log.warning(
+                "No current project or folder, cannot create instance for "
+                f"'{comp.name}'."
+            )
+            return
+
+        task_entity = self.create_context.get_current_task_entity()
+
+        data = {
+            "folderPath": folder_entity["path"],
+            "task": task_entity["name"] if task_entity else None,
+            "variant": variant,
+            "composition_name": variant,
+            "members": [comp.id],
+            "orig_comp_name": variant,
+            "creator_attributes": {
+                "render_target": "local",
+                "mark_for_review": self.mark_for_review,
+            },
+        }
+
+        product_name = self.get_product_name(
+            project_name=project_name,
+            folder_entity=folder_entity,
+            task_entity=task_entity,
+            variant=variant,
+            host_name=self.create_context.host_name,
+        )
+        # 'get_dynamic_data' leaves '{composition}' unresolved without an
+        # instance to read it from, so fill it in here
+        dynamic_fill = prepare_template_data({"composition": variant})
+        product_name = product_name.format(**dynamic_fill)
+
+        new_instance = CreatedInstance(
+            product_base_type=self.product_base_type,
+            product_type=self.product_type,
+            product_name=product_name,
+            data=data,
+            creator=self,
+        )
+        api.get_stub().imprint(new_instance.id, new_instance.data_to_store())
+        self._add_instance_to_context(new_instance)
 
     def update_instances(self, update_list):
         for created_inst, _changes in update_list:

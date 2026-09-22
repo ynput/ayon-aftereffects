@@ -371,6 +371,15 @@ function main(websocket_url){
            });
    });
 
+   RPC.addRoute('AfterEffects.get_render_queue_comps', function (data) {
+       log.warn('Server called client route "get_render_queue_comps":', data);
+       return runEvalScript("getRenderQueueComps()")
+           .then(function (result) {
+               log.warn("get_render_queue_comps: " + result);
+               return result;
+           });
+   });
+
    RPC.addRoute('AfterEffects.render', function (data) {
     log.warn('Server called client route "render":', data);
     var escapedPath = EscapeStringForJSX(data.folder_url);
