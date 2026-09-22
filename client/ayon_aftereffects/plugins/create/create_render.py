@@ -40,6 +40,7 @@ class RenderCreator(Creator):
     mark_for_review = True
     force_setting_values = True
     rename_comp_to_product_name = True
+    use_comp_name_as_variant = False
 
     def create(self, product_name, data, pre_create_data):
         stub = api.get_stub()  # only after After Effects is up
@@ -73,13 +74,41 @@ class RenderCreator(Creator):
             "mark_for_review": pre_create_data["mark_for_review"]
         }
 
+        project_name = self.create_context.get_current_project_name()
+        folder_entity = self.create_context.get_current_folder_entity()
+        task_entity = self.create_context.get_current_task_entity()
+        host_name = self.create_context.host_name
+
         for comp in comps:
             composition_name = re.sub(
                 "[^{}]+".format(PRODUCT_NAME_ALLOWED_SYMBOLS),
                 "",
                 comp.name
             )
-            if use_composition_name:
+            if self.use_comp_name_as_variant:
+                if not composition_name:
+                    self.log.warning(
+                        "Cannot build a variant from composition "
+                        f"name '{comp.name}', skipping."
+                    )
+                    continue
+                variant = composition_name
+                data["variant"] = variant
+                data["composition_name"] = composition_name
+                comp_product_name = self.get_product_name(
+                    project_name=project_name,
+                    folder_entity=folder_entity,
+                    task_entity=task_entity,
+                    variant=variant,
+                    host_name=host_name,
+                )
+                dynamic_fill = prepare_template_data(
+                    {"composition": composition_name}
+                )
+                comp_product_name = comp_product_name.format(
+                    **dynamic_fill
+                )
+            elif use_composition_name:
                 if "{composition}" not in product_name.lower():
                     product_name += "{Composition}"
 

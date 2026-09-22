@@ -29,6 +29,16 @@ class CreateRenderPlugin(BaseSettingsModel):
             "or when updating product name, e.g. on variant change."
         )
     )
+    use_comp_name_as_variant: bool = SettingsField(
+        False,
+        title="Use composition name as variant",
+        description=(
+            "Derive the variant from the composition name instead of "
+            "the artist-entered value. Each instance uses its "
+            "composition name as the variant, so the product name "
+            "becomes e.g. 'renderSH010_comp'."
+        )
+    )
     product_type_items: list[ProductTypeItemModel] = SettingsField(
         default_factory=list,
         title="Product type items",

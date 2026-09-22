@@ -58,6 +58,7 @@ DEFAULT_AFTEREFFECTS_SETTING = {
             "default_variants": ["Main"],
             "force_setting_values": True,
             "rename_comp_to_product_name": True,
+            "use_comp_name_as_variant": False,
         }
     },
     "publish": AE_PUBLISH_PLUGINS_DEFAULTS,
