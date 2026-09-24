@@ -36,7 +36,8 @@ class CreateRenderPlugin(BaseSettingsModel):
             "Derive the variant from the composition name instead of "
             "the artist-entered value. Each instance uses its "
             "composition name as the variant, so the product name "
-            "becomes e.g. 'renderSH010_comp'."
+            "becomes e.g. 'renderSH010_comp'. Replaces the 'Use "
+            "composition name in product' option in the Publisher."
         )
     )
     product_type_items: list[ProductTypeItemModel] = SettingsField(

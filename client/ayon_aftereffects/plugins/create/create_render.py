@@ -177,8 +177,14 @@ class RenderCreator(Creator):
                     tooltip="Composition for publishable instance should be "
                             "selected by default.",
                     default=True, label="Use selection"),
-            BoolDef("use_composition_name",
-                    label="Use composition name in product"),
+        ]
+        # Both options take the composition name, so only one can be offered
+        if not self.use_comp_name_as_variant:
+            output.append(
+                BoolDef("use_composition_name",
+                        label="Use composition name in product")
+            )
+        output.extend([
             UISeparatorDef(),
             EnumDef(
                 "render_target",
@@ -190,7 +196,7 @@ class RenderCreator(Creator):
                 label="Review",
                 default=self.mark_for_review
             )
-        ]
+        ])
         return output
 
     def get_instance_attr_defs(self):
