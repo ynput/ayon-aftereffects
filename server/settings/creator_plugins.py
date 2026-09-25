@@ -29,6 +29,17 @@ class CreateRenderPlugin(BaseSettingsModel):
             "or when updating product name, e.g. on variant change."
         )
     )
+    sync_with_render_queue: bool = SettingsField(
+        False,
+        title="Sync created products with render queue",
+        description=(
+            "Mirror the After Effects render queue into the created products "
+            "list. Compositions queued directly in After Effects get a render "
+            "instance whose variant is the composition name, and instances "
+            "whose composition left the queue are removed. Sync runs when the "
+            "publisher is opened or refreshed."
+        )
+    )
     product_type_items: list[ProductTypeItemModel] = SettingsField(
         default_factory=list,
         title="Product type items",
