@@ -14,6 +14,17 @@ from ayon_aftereffects.api.pipeline import cache_and_get_instances
 from ayon_aftereffects.api.lib import set_settings
 
 
+def _clean_composition_name(comp_name):
+    """Strip characters that are not allowed in product names."""
+    return re.sub("[^{}]+".format(PRODUCT_NAME_ALLOWED_SYMBOLS), "", comp_name)
+
+
+def _fill_composition(product_name, composition_name):
+    """Fill the '{composition}' placeholder, in any letter case."""
+    dynamic_fill = prepare_template_data({"composition": composition_name})
+    return product_name.format(**dynamic_fill)
+
+
 class RenderCreator(Creator):
     """Creates 'render' instance for publishing.
 
@@ -75,18 +86,14 @@ class RenderCreator(Creator):
         }
 
         for comp in comps:
-            composition_name = re.sub(
-                "[^{}]+".format(PRODUCT_NAME_ALLOWED_SYMBOLS),
-                "",
-                comp.name
-            )
+            composition_name = _clean_composition_name(comp.name)
             if use_composition_name:
                 if "{composition}" not in product_name.lower():
                     product_name += "{Composition}"
 
-                dynamic_fill = prepare_template_data({"composition":
-                                                      composition_name})
-                comp_product_name = product_name.format(**dynamic_fill)
+                comp_product_name = _fill_composition(
+                    product_name, composition_name
+                )
                 data["composition_name"] = composition_name
             else:
                 comp_product_name = re.sub(
@@ -101,20 +108,7 @@ class RenderCreator(Creator):
             if self.rename_comp_to_product_name:
                 data["orig_comp_name"] = composition_name
 
-            product_type = data.get("productType")
-            if not product_type:
-                product_type = self.product_base_type
-            new_instance = CreatedInstance(
-                product_base_type=self.product_base_type,
-                product_type=product_type,
-                product_name=comp_product_name,
-                data=data,
-                creator=self,
-            )
-
-            api.get_stub().imprint(new_instance.id,
-                                   new_instance.data_to_store())
-            self._add_instance_to_context(new_instance)
+            self._add_new_instance(comp_product_name, data)
 
             if self.rename_comp_to_product_name:
                 stub.rename_item(comp.id, comp_product_name)
@@ -178,6 +172,25 @@ class RenderCreator(Creator):
                 default=False
             )
         ]
+
+    def _add_new_instance(self, product_name, data):
+        """Create an instance, store it in the workfile and add it to context.
+
+        Args:
+            product_name (str): Fully resolved product name.
+            data (dict): Instance data. Product type is read from its
+                'productType' key, defaulting to the creator's base type.
+        """
+        product_type = data.get("productType") or self.product_base_type
+        new_instance = CreatedInstance(
+            product_base_type=self.product_base_type,
+            product_type=product_type,
+            product_name=product_name,
+            data=data,
+            creator=self,
+        )
+        api.get_stub().imprint(new_instance.id, new_instance.data_to_store())
+        self._add_instance_to_context(new_instance)
 
     def _ensure_comp_in_render_queue(
         self, stub: object, comp_id: int, comp_name: str
@@ -274,11 +287,7 @@ class RenderCreator(Creator):
         Args:
             comp (AEItem): Composition record from the render queue.
         """
-        variant = re.sub(
-            "[^{}]+".format(PRODUCT_NAME_ALLOWED_SYMBOLS),
-            "",
-            comp.name
-        )
+        variant = _clean_composition_name(comp.name)
         if not variant:
             self.log.warning(
                 f"Cannot build a variant from composition name '{comp.name}', "
@@ -297,9 +306,17 @@ class RenderCreator(Creator):
 
         task_entity = self.create_context.get_current_task_entity()
 
+        # Same default as 'CreateContext.create', so a product type set in
+        # the creator settings applies here too
+        product_type = next(
+            (item.product_type for item in self.get_product_type_items()),
+            self.product_base_type,
+        )
+
         data = {
             "folderPath": folder_entity["path"],
             "task": task_entity["name"] if task_entity else None,
+            "productType": product_type,
             "variant": variant,
             "composition_name": variant,
             "members": [comp.id],
@@ -316,21 +333,13 @@ class RenderCreator(Creator):
             task_entity=task_entity,
             variant=variant,
             host_name=self.create_context.host_name,
+            product_type=product_type,
         )
         # 'get_dynamic_data' leaves '{composition}' unresolved without an
         # instance to read it from, so fill it in here
-        dynamic_fill = prepare_template_data({"composition": variant})
-        product_name = product_name.format(**dynamic_fill)
+        product_name = _fill_composition(product_name, variant)
 
-        new_instance = CreatedInstance(
-            product_base_type=self.product_base_type,
-            product_type=self.product_type,
-            product_name=product_name,
-            data=data,
-            creator=self,
-        )
-        api.get_stub().imprint(new_instance.id, new_instance.data_to_store())
-        self._add_instance_to_context(new_instance)
+        self._add_new_instance(product_name, data)
 
     def update_instances(self, update_list):
         for created_inst, _changes in update_list:
