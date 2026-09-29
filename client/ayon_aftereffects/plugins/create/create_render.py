@@ -14,17 +14,6 @@ from ayon_aftereffects.api.pipeline import cache_and_get_instances
 from ayon_aftereffects.api.lib import set_settings
 
 
-def _clean_composition_name(comp_name):
-    """Strip characters that are not allowed in product names."""
-    return re.sub("[^{}]+".format(PRODUCT_NAME_ALLOWED_SYMBOLS), "", comp_name)
-
-
-def _fill_composition(product_name, composition_name):
-    """Fill the '{composition}' placeholder, in any letter case."""
-    dynamic_fill = prepare_template_data({"composition": composition_name})
-    return product_name.format(**dynamic_fill)
-
-
 class RenderCreator(Creator):
     """Creates 'render' instance for publishing.
 
@@ -53,7 +42,22 @@ class RenderCreator(Creator):
     rename_comp_to_product_name = True
     sync_with_render_queue = False
 
-    def create(self, product_name, data, pre_create_data):
+    @staticmethod
+    def _clean_composition_name(comp_name) -> str:
+        """Strip characters that are not allowed in product names."""
+        return re.sub(
+            "[^{}]+".format(PRODUCT_NAME_ALLOWED_SYMBOLS), "", comp_name
+        )
+
+    @staticmethod
+    def _fill_composition(product_name, composition_name) -> str:
+        """Fill the '{composition}' placeholder, in any letter case."""
+        dynamic_fill: dict[str, str] = prepare_template_data(
+            {"composition": composition_name}
+        )
+        return product_name.format(**dynamic_fill)
+
+    def create(self, product_name, instance_data, pre_create_data):
         stub = api.get_stub()  # only after After Effects is up
 
         try:
@@ -86,15 +90,15 @@ class RenderCreator(Creator):
         }
 
         for comp in comps:
-            composition_name = _clean_composition_name(comp.name)
+            composition_name = self._clean_composition_name(comp.name)
             if use_composition_name:
                 if "{composition}" not in product_name.lower():
                     product_name += "{Composition}"
 
-                comp_product_name = _fill_composition(
+                comp_product_name = self._fill_composition(
                     product_name, composition_name
                 )
-                data["composition_name"] = composition_name
+                instance_data["composition_name"] = composition_name
             else:
                 comp_product_name = re.sub(
                     r"\{composition\}",
@@ -103,12 +107,12 @@ class RenderCreator(Creator):
                     flags=re.IGNORECASE
                 )
 
-            data["members"] = [comp.id]
-            data["creator_attributes"] = creator_attributes
+            instance_data["members"] = [comp.id]
+            instance_data["creator_attributes"] = creator_attributes
             if self.rename_comp_to_product_name:
-                data["orig_comp_name"] = composition_name
+                instance_data["orig_comp_name"] = composition_name
 
-            self._add_new_instance(comp_product_name, data)
+            self._add_new_instance(comp_product_name, instance_data)
 
             if self.rename_comp_to_product_name:
                 stub.rename_item(comp.id, comp_product_name)
@@ -116,14 +120,14 @@ class RenderCreator(Creator):
                 # Force fps, frame range and resolution of comp to match
                 # the target publish context attributes.
                 # Task is not required for an instance, so it may be not set
-                if data.get("task"):
+                if instance_data.get("task"):
                     entity = self.create_context.get_task_entity(
-                        folder_path=data["folderPath"],
-                        task_name=data["task"]
+                        folder_path=instance_data["folderPath"],
+                        task_name=instance_data["task"],
                     )
                 else:
                     entity = self.create_context.get_folder_entity(
-                        folder_path=data["folderPath"]
+                        folder_path=instance_data["folderPath"]
                     )
                 set_settings(
                     frames=True,
@@ -288,7 +292,7 @@ class RenderCreator(Creator):
         Args:
             comp (AEItem): Composition record from the render queue.
         """
-        composition_name = _clean_composition_name(comp.name)
+        composition_name = self._clean_composition_name(comp.name)
         if not composition_name:
             self.log.warning(
                 f"Cannot use composition name '{comp.name}' in a product "
@@ -298,15 +302,16 @@ class RenderCreator(Creator):
         variant = self.default_variant
 
         project_name = self.create_context.get_current_project_name()
+        project_entity = self.create_context.get_current_project_entity()
         folder_entity = self.create_context.get_current_folder_entity()
-        if not (project_name and folder_entity):
+        task_entity = self.create_context.get_current_task_entity()
+
+        if not (project_name and project_entity and folder_entity):
             self.log.warning(
                 "No current project or folder, cannot create instance for "
                 f"'{comp.name}'."
             )
             return
-
-        task_entity = self.create_context.get_current_task_entity()
 
         # Same default as 'CreateContext.create', so a product type set in
         # the creator settings applies here too
@@ -331,6 +336,7 @@ class RenderCreator(Creator):
 
         product_name = self.get_product_name(
             project_name=project_name,
+            project_entity=project_entity,
             folder_entity=folder_entity,
             task_entity=task_entity,
             variant=variant,
@@ -339,7 +345,7 @@ class RenderCreator(Creator):
         )
         # 'get_dynamic_data' leaves '{composition}' unresolved without an
         # instance to read it from, so fill it in here
-        product_name = _fill_composition(product_name, composition_name)
+        product_name = self._fill_composition(product_name, composition_name)
 
         self._add_new_instance(product_name, data)
 
