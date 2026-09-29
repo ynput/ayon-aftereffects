@@ -280,20 +280,22 @@ class RenderCreator(Creator):
     def _create_instance_for_queued_comp(self, comp):
         """Create a render instance for a composition found in the queue.
 
-        Variant is the composition name, cleaned of characters that are not
-        allowed in product names. Folder and task come from the current
+        Uses the creator's default variant. The composition name only
+        appears in the product name where the template has a
+        '{composition}' placeholder. Folder and task come from the current
         context, as the queue carries no publish context of its own.
 
         Args:
             comp (AEItem): Composition record from the render queue.
         """
-        variant = _clean_composition_name(comp.name)
-        if not variant:
+        composition_name = _clean_composition_name(comp.name)
+        if not composition_name:
             self.log.warning(
-                f"Cannot build a variant from composition name '{comp.name}', "
-                "skipping."
+                f"Cannot use composition name '{comp.name}' in a product "
+                "name, skipping."
             )
             return
+        variant = self.default_variant
 
         project_name = self.create_context.get_current_project_name()
         folder_entity = self.create_context.get_current_folder_entity()
@@ -318,9 +320,9 @@ class RenderCreator(Creator):
             "task": task_entity["name"] if task_entity else None,
             "productType": product_type,
             "variant": variant,
-            "composition_name": variant,
+            "composition_name": composition_name,
             "members": [comp.id],
-            "orig_comp_name": variant,
+            "orig_comp_name": composition_name,
             "creator_attributes": {
                 "render_target": "local",
                 "mark_for_review": self.mark_for_review,
@@ -337,7 +339,7 @@ class RenderCreator(Creator):
         )
         # 'get_dynamic_data' leaves '{composition}' unresolved without an
         # instance to read it from, so fill it in here
-        product_name = _fill_composition(product_name, variant)
+        product_name = _fill_composition(product_name, composition_name)
 
         self._add_new_instance(product_name, data)
 

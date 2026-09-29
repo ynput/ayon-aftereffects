@@ -35,7 +35,7 @@ class CreateRenderPlugin(BaseSettingsModel):
         description=(
             "Mirror the After Effects render queue into the created products "
             "list. Compositions queued directly in After Effects get a render "
-            "instance whose variant is the composition name, and instances "
+            "instance with the default variant, and instances "
             "whose composition left the queue are removed. Sync runs when the "
             "publisher is opened or refreshed."
         )
