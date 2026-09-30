@@ -1040,6 +1040,39 @@ function render(target_folder, comp_id) {
     app.endSuppressDialogs(false);
 }
 
+function getRenderQueueComps() {
+    /**
+     * Return compositions currently present in the render queue.
+     *
+     * Queue items whose composition was deleted from the project are
+     * skipped, so every record maps to a live CompItem.
+     *
+     * Returns:
+     *    (str): JSON list of {name, id, type} records.
+     */
+    var items = [];
+    // Each DOM hop is a host call, so hoist the collection and its count
+    // out of the loop and read every item's comp only once.
+    var renderQueue = app.project.renderQueue;
+    var total = renderQueue.numItems;
+    for (var i = 1; i <= total; ++i) {
+        var renderQueueItem = renderQueue.item(i);
+        if (!renderQueueItem) {
+            continue;
+        }
+        var comp = renderQueueItem.comp;
+        if (!comp) {
+            continue;
+        }
+        items.push(JSON.stringify({
+            "name": comp.name,
+            "id": comp.id,
+            "type": "comp"
+        }));
+    }
+    return '[' + items.join() + ']';
+}
+
 function close(){
     app.project.close(CloseOptions.DO_NOT_SAVE_CHANGES);
     app.quit();
