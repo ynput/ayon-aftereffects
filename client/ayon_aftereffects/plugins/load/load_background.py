@@ -91,5 +91,6 @@ class BackgroundLoader(api.AfterEffectsLoader):
         container["name"] = product_name
         container["namespace"] = loaded_item_name
         container["members"] = loaded_item.members
+        container["project_name"] = context["project"]["name"]
 
         stub.imprint(loaded_item.id, container)
