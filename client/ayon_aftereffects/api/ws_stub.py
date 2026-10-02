@@ -70,7 +70,8 @@ class AfterEffectsServerStub():
     def get_client():
         """
             Return first connected client to WebSocket whose transport is not
-            closing/closed. Skips stale entries so retries use a reconnected client.
+            closing/closed. Skips stale entries so retries use a reconnected
+            client.
             TODO implement selection by Route
         :return: <WebSocketAsync> client or None
         """

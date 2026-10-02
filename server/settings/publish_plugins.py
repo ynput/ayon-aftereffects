@@ -22,6 +22,14 @@ class ValidateSceneSettingsModel(BaseSettingsModel):
     )
 
 
+class ValidateFootageLocationModel(BaseSettingsModel):
+    """Validate footage is stored inside the project roots"""
+
+    enabled: bool = SettingsField(False, title="Enabled")
+    optional: bool = SettingsField(True, title="Optional")
+    active: bool = SettingsField(True, title="Active")
+
+
 class AfterEffectsPublishPlugins(BaseSettingsModel):
     CollectReview: CollectReviewPluginModel = SettingsField(
         default_factory=CollectReviewPluginModel,
@@ -30,6 +38,10 @@ class AfterEffectsPublishPlugins(BaseSettingsModel):
     ValidateSceneSettings: ValidateSceneSettingsModel = SettingsField(
         default_factory=ValidateSceneSettingsModel,
         title="Validate Scene Settings",
+    )
+    ValidateFootageLocation: ValidateFootageLocationModel = SettingsField(
+        default_factory=ValidateFootageLocationModel,
+        title="Validate Footage Location",
     )
 
 

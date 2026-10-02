@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Validate presence of footage items in composition
 Requires:
+    context -> footageItems
 """
 import os
 
@@ -9,7 +10,6 @@ import pyblish.api
 from ayon_core.pipeline import (
     PublishXmlValidationError
 )
-from ayon_aftereffects.api import get_stub
 
 
 class ValidateFootageItems(pyblish.api.InstancePlugin):
@@ -35,11 +35,11 @@ class ValidateFootageItems(pyblish.api.InstancePlugin):
         """Plugin entry point."""
 
         comp_id = instance.data["comp_id"]
-        for footage_item in get_stub().get_items(
-                comps=False, folders=False, footages=True):
-            self.log.debug(f"Validating footage item: {footage_item.name}")
+        for footage_item in instance.context.data["footageItems"]:
             if comp_id not in footage_item.containing_comps:
                 continue
+
+            self.log.debug(f"Validating footage item: {footage_item.name}")
 
             path = footage_item.path
             if path and not os.path.exists(path):

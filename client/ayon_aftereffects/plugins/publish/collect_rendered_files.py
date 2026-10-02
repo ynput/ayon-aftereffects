@@ -110,7 +110,7 @@ class CollectExistingFrames(pyblish.api.InstancePlugin):
     def _add_expected_files(self, instance, render_queue_path, expected_files):
         """Calculate expected files from file patterns in Render Queue"""
         render_queue_path = urllib.parse.unquote(render_queue_path)
-        frames_pattern = re.search("\[#*\]", render_queue_path)
+        frames_pattern = re.search(r"\[#*\]", render_queue_path)
 
         if not frames_pattern:
             expected_files.append(render_queue_path)
@@ -127,7 +127,6 @@ class CollectExistingFrames(pyblish.api.InstancePlugin):
             render_queue_path = render_queue_path.replace(
                 frames_pattern, frame_str)
             expected_files.append(render_queue_path)
-
 
     def _normalize_path(self, path):
         """AE might return path like '/c/Users/...', convert to proper path"""

@@ -12,6 +12,7 @@ from ayon_core.pipeline import PublishValidationError
 
 from ayon_aftereffects.api import get_stub
 
+
 @attr.s
 class AERenderInstance(RenderInstance):
     # extend generic, composition name is needed
