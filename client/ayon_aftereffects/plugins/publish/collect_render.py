@@ -114,7 +114,7 @@ class CollectAERender(publish.AbstractCollectRender):
                 productBaseType=product_base_type,
                 family=product_base_type,
                 families=instance_families,
-                version=inst.data["version"],
+                version=inst.data.get("version"),
                 time="",
                 source=current_file,
                 label=f"{product_name} - {product_base_type}",
@@ -193,7 +193,8 @@ class CollectAERender(publish.AbstractCollectRender):
         for file_name in render_instance.render_queue_file_paths:
             _, ext = os.path.splitext(os.path.basename(file_name))
             ext = ext.replace('.', '')
-            version_str = "v{:03d}".format(render_instance.version)
+            version = render_instance.version or 1
+            version_str = f"v{version:03d}"
             if "#" not in file_name:  # single frame (mov)
                 file_name = "{}_{}.{}".format(
                     render_instance.productName,
