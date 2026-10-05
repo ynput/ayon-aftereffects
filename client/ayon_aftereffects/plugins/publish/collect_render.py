@@ -114,7 +114,7 @@ class CollectAERender(publish.AbstractCollectRender):
                 productBaseType=product_base_type,
                 family=product_base_type,
                 families=instance_families,
-                version=inst.data["version"],
+                version=inst.data.get("version"),
                 time="",
                 source=current_file,
                 label=f"{product_name} - {product_base_type}",
