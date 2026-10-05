@@ -36,7 +36,7 @@ class CollectAERender(publish.AbstractCollectRender):
     should be run only on renderable instances.)
     """
     # Must run after core CollectSceneVersion
-    order = pyblish.api.CollectorOrder - 0.45
+    order = pyblish.api.CollectorOrder - 0.449
     label = "Collect After Effects Render Layers"
     hosts = ["aftereffects"]
 
