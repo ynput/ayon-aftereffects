@@ -40,8 +40,24 @@ class RenderCreator(Creator):
     mark_for_review = True
     force_setting_values = True
     rename_comp_to_product_name = True
+    sync_with_render_queue = False
 
-    def create(self, product_name, data, pre_create_data):
+    @staticmethod
+    def _clean_composition_name(comp_name) -> str:
+        """Strip characters that are not allowed in product names."""
+        return re.sub(
+            "[^{}]+".format(PRODUCT_NAME_ALLOWED_SYMBOLS), "", comp_name
+        )
+
+    @staticmethod
+    def _fill_composition(product_name, composition_name) -> str:
+        """Fill the '{composition}' placeholder, in any letter case."""
+        dynamic_fill: dict[str, str] = prepare_template_data(
+            {"composition": composition_name}
+        )
+        return product_name.format(**dynamic_fill)
+
+    def create(self, product_name, instance_data, pre_create_data):
         stub = api.get_stub()  # only after After Effects is up
 
         try:
@@ -74,19 +90,15 @@ class RenderCreator(Creator):
         }
 
         for comp in comps:
-            composition_name = re.sub(
-                "[^{}]+".format(PRODUCT_NAME_ALLOWED_SYMBOLS),
-                "",
-                comp.name
-            )
+            composition_name = self._clean_composition_name(comp.name)
             if use_composition_name:
                 if "{composition}" not in product_name.lower():
                     product_name += "{Composition}"
 
-                dynamic_fill = prepare_template_data({"composition":
-                                                      composition_name})
-                comp_product_name = product_name.format(**dynamic_fill)
-                data["composition_name"] = composition_name
+                comp_product_name = self._fill_composition(
+                    product_name, composition_name
+                )
+                instance_data["composition_name"] = composition_name
             else:
                 comp_product_name = re.sub(
                     r"\{composition\}",
@@ -95,25 +107,12 @@ class RenderCreator(Creator):
                     flags=re.IGNORECASE
                 )
 
-            data["members"] = [comp.id]
-            data["creator_attributes"] = creator_attributes
+            instance_data["members"] = [comp.id]
+            instance_data["creator_attributes"] = creator_attributes
             if self.rename_comp_to_product_name:
-                data["orig_comp_name"] = composition_name
+                instance_data["orig_comp_name"] = composition_name
 
-            product_type = data.get("productType")
-            if not product_type:
-                product_type = self.product_base_type
-            new_instance = CreatedInstance(
-                product_base_type=self.product_base_type,
-                product_type=product_type,
-                product_name=comp_product_name,
-                data=data,
-                creator=self,
-            )
-
-            api.get_stub().imprint(new_instance.id,
-                                   new_instance.data_to_store())
-            self._add_instance_to_context(new_instance)
+            self._add_new_instance(comp_product_name, instance_data)
 
             if self.rename_comp_to_product_name:
                 stub.rename_item(comp.id, comp_product_name)
@@ -121,14 +120,14 @@ class RenderCreator(Creator):
                 # Force fps, frame range and resolution of comp to match
                 # the target publish context attributes.
                 # Task is not required for an instance, so it may be not set
-                if data.get("task"):
+                if instance_data.get("task"):
                     entity = self.create_context.get_task_entity(
-                        folder_path=data["folderPath"],
-                        task_name=data["task"]
+                        folder_path=instance_data["folderPath"],
+                        task_name=instance_data["task"],
                     )
                 else:
                     entity = self.create_context.get_folder_entity(
-                        folder_path=data["folderPath"]
+                        folder_path=instance_data["folderPath"]
                     )
                 set_settings(
                     frames=True,
@@ -178,6 +177,25 @@ class RenderCreator(Creator):
             )
         ]
 
+    def _add_new_instance(self, product_name, data):
+        """Create an instance, store it in the workfile and add it to context.
+
+        Args:
+            product_name (str): Fully resolved product name.
+            data (dict): Instance data. Product type is read from its
+                'productType' key, defaulting to the creator's base type.
+        """
+        product_type = data.get("productType") or self.product_base_type
+        new_instance = CreatedInstance(
+            product_base_type=self.product_base_type,
+            product_type=product_type,
+            product_name=product_name,
+            data=data,
+            creator=self,
+        )
+        api.get_stub().imprint(new_instance.id, new_instance.data_to_store())
+        self._add_instance_to_context(new_instance)
+
     def _ensure_comp_in_render_queue(
         self, stub: object, comp_id: int, comp_name: str
     ) -> None:
@@ -204,6 +222,7 @@ class RenderCreator(Creator):
             )
 
     def collect_instances(self):
+        instances_by_comp_id = {}
         for instance_data in cache_and_get_instances(self):
             creator_id = instance_data.get("creator_identifier")
             if not creator_id:
@@ -220,6 +239,115 @@ class RenderCreator(Creator):
                     instance_data, self
                 )
                 self._add_instance_to_context(instance)
+                members = instance.data.get("members")
+                if members:
+                    instances_by_comp_id[int(members[0])] = instance
+
+        if self.sync_with_render_queue:
+            self._sync_with_render_queue(instances_by_comp_id)
+
+    def _sync_with_render_queue(self, instances_by_comp_id):
+        """Mirror the After Effects render queue into created instances.
+
+        Compositions queued directly in After Effects gain an instance, and
+        instances whose composition left the queue are dropped.
+
+        Args:
+            instances_by_comp_id (dict[int, CreatedInstance]): Already
+                collected instances keyed by the composition they publish.
+        """
+        try:
+            queued_comps = api.get_stub().get_render_queue_comps()
+        except Exception:
+            # Publisher reset must survive a disconnected or wedged AE
+            self.log.warning(
+                "Cannot read render queue, skipping sync.", exc_info=True
+            )
+            return
+
+        queued_by_comp_id = {int(comp.id): comp for comp in queued_comps}
+
+        for comp_id, comp in queued_by_comp_id.items():
+            if comp_id not in instances_by_comp_id:
+                self._create_instance_for_queued_comp(comp)
+
+        for comp_id, instance in instances_by_comp_id.items():
+            if comp_id in queued_by_comp_id:
+                continue
+            self.log.info(
+                f"Composition {comp_id} left the render queue, "
+                "removing its instance."
+            )
+            self._remove_instance_from_context(instance)
+            self.host.remove_instance(instance)
+
+    def _create_instance_for_queued_comp(self, comp):
+        """Create a render instance for a composition found in the queue.
+
+        Uses the creator's default variant. The composition name only
+        appears in the product name where the template has a
+        '{composition}' placeholder. Folder and task come from the current
+        context, as the queue carries no publish context of its own.
+
+        Args:
+            comp (AEItem): Composition record from the render queue.
+        """
+        composition_name = self._clean_composition_name(comp.name)
+        if not composition_name:
+            self.log.warning(
+                f"Cannot use composition name '{comp.name}' in a product "
+                "name, skipping."
+            )
+            return
+        variant = self.default_variant
+
+        project_name = self.create_context.get_current_project_name()
+        project_entity = self.create_context.get_current_project_entity()
+        folder_entity = self.create_context.get_current_folder_entity()
+        task_entity = self.create_context.get_current_task_entity()
+
+        if not (project_name and project_entity and folder_entity):
+            self.log.warning(
+                "No current project or folder, cannot create instance for "
+                f"'{comp.name}'."
+            )
+            return
+
+        # Same default as 'CreateContext.create', so a product type set in
+        # the creator settings applies here too
+        product_type = next(
+            (item.product_type for item in self.get_product_type_items()),
+            self.product_base_type,
+        )
+
+        data = {
+            "folderPath": folder_entity["path"],
+            "task": task_entity["name"] if task_entity else None,
+            "productType": product_type,
+            "variant": variant,
+            "composition_name": composition_name,
+            "members": [comp.id],
+            "orig_comp_name": composition_name,
+            "creator_attributes": {
+                "render_target": "local",
+                "mark_for_review": self.mark_for_review,
+            },
+        }
+
+        product_name = self.get_product_name(
+            project_name=project_name,
+            project_entity=project_entity,
+            folder_entity=folder_entity,
+            task_entity=task_entity,
+            variant=variant,
+            host_name=self.create_context.host_name,
+            product_type=product_type,
+        )
+        # 'get_dynamic_data' leaves '{composition}' unresolved without an
+        # instance to read it from, so fill it in here
+        product_name = self._fill_composition(product_name, composition_name)
+
+        self._add_new_instance(product_name, data)
 
     def update_instances(self, update_list):
         for created_inst, _changes in update_list:
