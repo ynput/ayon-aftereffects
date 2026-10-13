@@ -193,7 +193,7 @@ class CollectAERender(publish.AbstractCollectRender):
         for file_name in render_instance.render_queue_file_paths:
             _, ext = os.path.splitext(os.path.basename(file_name))
             ext = ext.replace('.', '')
-            version = render_instance.version or 1
+            version = render_instance.version or 0
             version_str = f"v{version:03d}"
             if "#" not in file_name:  # single frame (mov)
                 file_name = "{}_{}.{}".format(
