@@ -185,4 +185,4 @@ class ValidateSceneSettings(
     def repair(cls, instance):
         # settings fail - could fix it
         if os.path.exists(instance.data.get("source")):
-            set_settings(True,True, comp_ids=[instance.data["comp_id"]])
+            set_settings(True, True, comp_ids=[instance.data["comp_id"]])

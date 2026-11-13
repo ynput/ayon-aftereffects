@@ -102,7 +102,8 @@ class FileLoader(api.AfterEffectsLoader):
             {
                 "representation": repre_entity["id"],
                 "name": product_name,
-                "namespace": loaded_item_name
+                "namespace": loaded_item_name,
+                "project_name": context["project"]["name"]
             }
         )
 

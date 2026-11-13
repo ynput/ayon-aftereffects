@@ -194,15 +194,23 @@ function selectItems(items){
      * Args:
      *      items (list)
      */
-    for (i = 1; i <= app.project.items.length; ++i){
-        item = app.project.items[i];
-        if (items.indexOf(item.id) > -1){
-            item.selected = true;
-        }else{
-            item.selected = false;
-        }
+    // AE takes ~8ms per select, only write when the state actually differs
+    var wanted = {};
+    for (var i = 0; i < items.length; ++i){
+        wanted[items[i]] = true;
     }
 
+    var count = app.project.items.length;
+    for (var i = 1; i <= count; ++i){
+        var item = app.project.items[i];
+        if (!item){
+            continue;
+        }
+        var select = wanted[item.id] === true;
+        if (item.selected !== select){
+            item.selected = select;
+        }
+    }
 }
 
 function getSelectedItems(comps, folders, footages){
@@ -235,6 +243,9 @@ function _getItem(item, comps, folders, footages){
      * Auxiliary function as project items and selections
      * are indexed in different way :/
      * Refactor
+     *
+     * Returns null when the item type was not asked for, so callers can
+     * skip it instead of shipping an empty record over the socket.
      */
     var item_type = '';
     var path = '';
@@ -242,27 +253,30 @@ function _getItem(item, comps, folders, footages){
     if (item instanceof FolderItem){
         item_type = 'folder';
         if (!folders){
-            return "{}";
+            return null;
         }
     }
     if (item instanceof FootageItem){
         if (!footages){
-            return "{}";
+            return null;
         }
         item_type = 'footage';
         if (item.file){
             path = item.file.fsName;
         }
-        if (item.usedIn){
-            for (j = 0; j < item.usedIn.length; ++j){
-                containing_comps.push(item.usedIn[j].id);
+        // AE re-resolves usedIn on every read, so read it once here
+        // instead of inside the loop below
+        var used_in = item.usedIn;
+        if (used_in){
+            for (j = 0; j < used_in.length; ++j){
+                containing_comps.push(used_in[j].id);
             }
         }
     }
     if (item instanceof CompItem){
         item_type = 'comp';
         if (!comps){
-            return "{}";
+            return null;
         }
     }
 
@@ -549,12 +563,18 @@ function getRenderInfo(comp_id){
             }
 
             if (render_item.status == RQItemStatus.DONE){
+                // AE's duplicate() resets Output Module config to user defaults
+                // (mp4/H.264). STRING_SETTABLE alone does not reliably restore
+                // Format/Codec on the duplicate — aerender (farm) then renders
+                // mp4 even though we wanted JPG. To survive a round-trip, we
+                // stash the OM as a throw-away template before duplicate() and
+                // applyTemplate() on the new item. setSettings() is layered on
+                // top to carry any artist customizations.
                 for (j = 1; j<= render_item.numOutputModules; ++j){
                     var item = render_item.outputModule(j);
                     original_file_names.push(item.file);
                 }
-                render_item.duplicate();  // create new, cannot change status if DONE
-                render_item.remove();  // remove existing to limit duplications
+                render_item = _duplicate_with_settings(render_item);
                 continue;
             }
         }
@@ -996,17 +1016,16 @@ function render(target_folder, comp_id) {
         var composition = render_item.comp;
         if (composition.id == comp_id){
             if (render_item.status == RQItemStatus.DONE){
-                var new_item = render_item.duplicate();
-                render_item.remove();
-                render_item = new_item;
+                // Preserve Output Module config across duplicate(). See
+                // getRenderInfo() for the full rationale. Same template-stash
+                // + setSettings layering is used here.
+                render_item = _duplicate_with_settings(render_item);
             }
 
             render_item.render = true;
 
             var om1 = app.project.renderQueue.item(i).outputModule(1);
             var file_name = File.decode( om1.file.name ).replace('℗', ''); // Name contains special character, space?
-
-            var omItem1_settable_str = app.project.renderQueue.item(i).outputModule(1).getSettings( GetSettingsFormat.STRING_SETTABLE );
 
             var targetFolder = new Folder(target_folder);
             if (!targetFolder.exists) {
@@ -1024,6 +1043,39 @@ function render(target_folder, comp_id) {
     app.beginSuppressDialogs();
     app.project.renderQueue.render();
     app.endSuppressDialogs(false);
+}
+
+function getRenderQueueComps() {
+    /**
+     * Return compositions currently present in the render queue.
+     *
+     * Queue items whose composition was deleted from the project are
+     * skipped, so every record maps to a live CompItem.
+     *
+     * Returns:
+     *    (str): JSON list of {name, id, type} records.
+     */
+    var items = [];
+    // Each DOM hop is a host call, so hoist the collection and its count
+    // out of the loop and read every item's comp only once.
+    var renderQueue = app.project.renderQueue;
+    var total = renderQueue.numItems;
+    for (var i = 1; i <= total; ++i) {
+        var renderQueueItem = renderQueue.item(i);
+        if (!renderQueueItem) {
+            continue;
+        }
+        var comp = renderQueueItem.comp;
+        if (!comp) {
+            continue;
+        }
+        items.push(JSON.stringify({
+            "name": comp.name,
+            "id": comp.id,
+            "type": "comp"
+        }));
+    }
+    return '[' + items.join() + ']';
 }
 
 function close(){
@@ -1098,6 +1150,38 @@ function addItemInstead(placeholder_item_id, item_id){
         }
     }
     app.endUndoGroup();
+}
+
+function _duplicate_with_settings(render_item) {
+    /**
+     * Duplicate a render queue item while preserving Output Module settings.
+     *
+     * AE's duplicate() resets Output Module config to user defaults.
+     * To survive a round-trip, we repply OM settings.
+     *
+     * Args:
+     *     render_item (RenderQueueItem): The render queue item to duplicate.
+     * Returns:
+     *     (RenderQueueItem): The new duplicated render queue item.
+     */
+    var stored_om_settings = [];
+    for (var j = 1; j <= render_item.numOutputModules; ++j) {
+        var om = render_item.outputModule(j);
+        // Grab the full settings state
+        stored_om_settings.push(
+            om.getSettings(GetSettingsFormat.STRING_SETTABLE)
+        );
+    }
+
+    var new_item = render_item.duplicate();
+    render_item.remove();  
+
+    for (var j = 1; j <= new_item.numOutputModules; ++j) {
+        var new_om = new_item.outputModule(j);
+        // Apply the exact settings state directly
+        new_om.setSettings(stored_om_settings[j - 1]);
+    }
+    return new_item;
 }
 
 function _prepareSingleValue(value){

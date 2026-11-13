@@ -47,6 +47,7 @@ class AETemplateBuilder(AbstractTemplateBuilder):
 
 class AEPlaceholderPlugin(PlaceholderPlugin):
     """Contains generic methods for all PlaceholderPlugins."""
+    skip_discovery = True
 
     @abstractmethod
     def _create_placeholder_item(self, item_data: dict) -> PlaceholderItem:

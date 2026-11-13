@@ -83,7 +83,8 @@ class InstallAyonExtensionToAfterEffect(PreLaunchHook):
     ) -> bool:
         try:
             # opens the existing extension manifest to get the Version attr
-            with target_path.joinpath("CSXS", "manifest.xml").open("rb") as xml_file:
+            with target_path.joinpath(
+                "CSXS", "manifest.xml").open("rb") as xml_file:
                 installed_version = (
                     ET.parse(xml_file)
                     .getroot()

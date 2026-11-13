@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+<error id="main">
+<title>Footage outside of project roots</title>
+<description>
+## Footage outside of project roots
+
+These footage items are not stored under any AYON project root:
+
+{invalid_footage_str}
+
+Files kept in a local folder (Desktop, Downloads, a personal drive) cannot be
+reached by the render farm or by other artists. After Effects fails silently
+on unreachable footage, so the render produces missing frames without any
+error message.
+### How to repair?
+
+Copy the files into the project work area, then relink them in After Effects:
+right click the footage item in the Project panel and choose
+`Replace Footage` &gt; `File...`.
+
+If this is a legitimate case, untick **Validate Footage Location** on the
+**Context** item in the publisher and publish again.
+</description>
+</error>
+</root>

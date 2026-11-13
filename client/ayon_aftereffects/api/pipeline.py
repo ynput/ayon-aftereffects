@@ -278,7 +278,8 @@ def containerise(name,
         "namespace": namespace,
         "loader": str(loader),
         "representation": context["representation"]["id"],
-        "members": comp.members or [comp.id]
+        "members": comp.members or [comp.id],
+        "project_name": context["project"]["name"],
     }
 
     stub = get_stub()

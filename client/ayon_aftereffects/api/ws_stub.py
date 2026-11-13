@@ -70,7 +70,8 @@ class AfterEffectsServerStub():
     def get_client():
         """
             Return first connected client to WebSocket whose transport is not
-            closing/closed. Skips stale entries so retries use a reconnected client.
+            closing/closed. Skips stale entries so retries use a reconnected
+            client.
             TODO implement selection by Route
         :return: <WebSocketAsync> client or None
         """
@@ -687,6 +688,17 @@ class AfterEffectsServerStub():
             self, "AfterEffects.remove_comp_from_render_queue", comp_id=comp_id
         )
         return self._handle_return(res)
+
+    def get_render_queue_comps(self):
+        """Get compositions currently queued in the render queue.
+
+        Returns:
+            (list) of AEItem, one per queued composition.
+        """
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.get_render_queue_comps"
+        )
+        return self._to_records(self._handle_return(res))
 
     def render(self, folder_url, comp_id):
         """
