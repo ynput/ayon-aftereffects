@@ -35,7 +35,7 @@ async function startUp(url){
     promis = runEvalScript("getEnv('AYON_VERSION_UP_WORKFILE')");
     var version_up = await promis;
     if (!version_up || version_up.toString() != 'true'){
-        $("#version-up-workfile-button").parent().hide();
+        $("#version-up-workfile-button").hide();
     }
 
     // run rest only after resolved promise
