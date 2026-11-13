@@ -71,6 +71,10 @@ class ValidateSceneSettings(
         if not self.is_active(instance.data):
             return
 
+        if instance.data.get("render_queue_error"):
+            self.log.debug("Render Queue problem, see Validate Render Queue")
+            return
+
         entity: dict = (
             instance.data.get("taskEntity")
             or instance.data["folderEntity"]

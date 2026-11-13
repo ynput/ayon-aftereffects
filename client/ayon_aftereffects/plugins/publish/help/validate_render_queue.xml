@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+<error id="duplicate_items">
+<title>Composition queued more than once</title>
+<description>
+## Composition queued more than once
+
+Composition **{comp_name}** has **{count}** items in the Render Queue. Only one is allowed, because the render settings and output file name are taken from it.
+
+This usually happens when the composition is queued again after a local render.
+
+### How to repair?
+
+- Click **Repair** to keep one item and remove the others, then **refresh** the publisher (circular arrow button).
+  - It keeps the last item that hasn't been rendered yet, or the last one if all of them are done.
+  - It also sets that item's output folder and file name, the same way AYON does when the instance is created.
+- Or remove the extra items yourself in *Window > Render Queue*, make sure the remaining one has *Output To* set, then refresh the publisher.
+</description>
+<detail>
+### __Detailed Info__ (optional)
+
+Repair keeps the format and codec of the remaining item. Check its Output Module after the repair, in case the removed one had the settings you wanted.
+</detail>
+</error>
+<error id="no_item">
+<title>Composition not in Render Queue</title>
+<description>
+## Composition not in Render Queue
+
+Composition **{comp_name}** has no item in the Render Queue, so there is nothing to render or publish.
+
+### How to repair?
+
+- Click **Repair** to add it to the Render Queue, then **refresh** the publisher (circular arrow button).
+- Or add it yourself with *Composition > Add to Render Queue*, then refresh the publisher.
+
+Check the Output Module of the new item, it uses your default settings.
+</description>
+</error>
+<error id="main">
+<title>Render Queue problem</title>
+<description>
+## Render Queue problem
+
+The Render Queue item for composition **{comp_name}** couldn't be read:
+
+{error}
+
+### How to repair?
+
+Open *Window > Render Queue*, check the item and its Output Module, then refresh the publisher.
+</description>
+</error>
+</root>

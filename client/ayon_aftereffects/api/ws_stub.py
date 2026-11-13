@@ -689,6 +689,26 @@ class AfterEffectsServerStub():
         )
         return self._handle_return(res)
 
+    def remove_duplicate_render_queue_items(self, comp_id):
+        """Keep a single render queue item for a composition.
+
+        Keeps the last item that is not rendered yet, or the last item
+        when all of them are already rendered, and sets its output folder
+        and file name the same way as when the comp is first queued.
+
+        Args:
+            comp_id: After Effects composition item id.
+
+        Returns:
+            int: Number of removed render queue items.
+        """
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.remove_duplicate_render_queue_items",
+            comp_id=comp_id,
+        )
+        return self._handle_return(res)
+
     def get_render_queue_comps(self):
         """Get compositions currently queued in the render queue.
 
