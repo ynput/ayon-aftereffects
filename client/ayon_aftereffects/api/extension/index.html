@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <title>AYON</title>
 
-<link rel="stylesheet" href="css/topcoat-desktop-dark.min.css"/>
 <link  id="hostStyle" rel="stylesheet" href="css/styles.css"/>
 
 <script src="js/libs/jquery-2.0.2.min.js"></script>
@@ -13,50 +12,23 @@
 
 <body>
 
-    <!-- icon sprite, referenced by <use> so each glyph is defined once -->
+    <!-- icon sprite, Material Symbols Outlined (Apache 2.0), the icon
+         set AYON uses. Built from ayon-core's bundled font. -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-        <symbol id="i-folder" viewBox="0 0 24 24">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-        </symbol>
-        <symbol id="i-version-up" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="8"/><polyline points="8 12 12 8 16 12"/>
-        </symbol>
-        <symbol id="i-load" viewBox="0 0 24 24">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-        </symbol>
-        <symbol id="i-publish" viewBox="0 0 24 24">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-        </symbol>
-        <symbol id="i-manage" viewBox="0 0 24 24">
-            <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
-        </symbol>
-        <symbol id="i-resolution" viewBox="0 0 24 24">
-            <path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"/><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"/>
-        </symbol>
-        <symbol id="i-frames" viewBox="0 0 24 24">
-            <rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/>
-        </symbol>
-        <symbol id="i-apply-all" viewBox="0 0 24 24">
-            <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-        </symbol>
-        <symbol id="i-create" viewBox="0 0 24 24">
-            <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
-        </symbol>
-        <symbol id="i-update" viewBox="0 0 24 24">
-            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-        </symbol>
-        <symbol id="i-build" viewBox="0 0 24 24">
-            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-        </symbol>
-        <symbol id="i-code" viewBox="0 0 24 24">
-            <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
-        </symbol>
-        <symbol id="i-run" viewBox="0 0 24 24">
-            <polygon points="5 3 19 12 5 21 5 3"/>
-        </symbol>
-        <symbol id="i-experimental" viewBox="0 0 24 24">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-        </symbol>
+        <symbol id="i-folder" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M160 160Q127 160 103.5 183.5Q80 207 80 240V720Q80 753 103.5 776.5Q127 800 160 800H400L480 720H800Q833 720 856.5 696.5Q880 673 880 640H447L367 720H160Q160 720 160 720Q160 720 160 720V240Q160 240 160 240Q160 240 160 240L256 560H940L837 217Q829 191 807.5 175.5Q786 160 760 160ZM244 240H760L832 480H316ZM244 240 316 480 244 240ZM160 640V720Q160 720 160 720Q160 720 160 720V640Z"/></symbol>
+        <symbol id="i-version-up" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M240 280V400H120V480H240V600H320V480H440V400H320V280ZM630 200V638L538 572L492 642L656 760H720V200Z"/></symbol>
+        <symbol id="i-load" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M480 320 280 520 336 578 440 474V800H520V474L624 578L680 520ZM240 160Q207 160 183.5 183.5Q160 207 160 240V360H240V240Q240 240 240 240Q240 240 240 240H720Q720 240 720 240Q720 240 720 240V360H800V240Q800 207 776.5 183.5Q753 160 720 160Z"/></symbol>
+        <symbol id="i-publish" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M440 160V486L336 382L280 440L480 640L680 440L624 382L520 486V160ZM160 600V720Q160 753 183.5 776.5Q207 800 240 800H720Q753 800 776.5 776.5Q800 753 800 720V600H720V720Q720 720 720 720Q720 720 720 720H240Q240 720 240 720Q240 720 240 720V600Z"/></symbol>
+        <symbol id="i-manage" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M200 80Q167 80 143.5 103.5Q120 127 120 160V611Q102 622 91 639.5Q80 657 80 680V800Q80 833 103.5 856.5Q127 880 160 880H800Q833 880 856.5 856.5Q880 833 880 800V680Q880 657 869 639.5Q858 622 840 611V160Q840 127 816.5 103.5Q793 80 760 80ZM200 600V160Q200 160 200 160Q200 160 200 160H760Q760 160 760 160Q760 160 760 160V600ZM160 680H800Q800 680 800 680Q800 680 800 680V800Q800 800 800 800Q800 800 800 800H160Q160 800 160 800Q160 800 160 800V680Q160 680 160 680Q160 680 160 680ZM360 400H600V480H360ZM480 380Q480 380 480 380Q480 380 480 380Q480 380 480 380Q480 380 480 380Z"/></symbol>
+        <symbol id="i-resolution" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M560 280H760V480H680V360H560ZM200 480H280V600H400V680H200ZM160 160Q127 160 103.5 183.5Q80 207 80 240V720Q80 753 103.5 776.5Q127 800 160 800H800Q833 800 856.5 776.5Q880 753 880 720V240Q880 207 856.5 183.5Q833 160 800 160ZM160 240H800Q800 240 800 240Q800 240 800 240V720Q800 720 800 720Q800 720 800 720H160Q160 720 160 720Q160 720 160 720V240Q160 240 160 240Q160 240 160 240ZM160 240Q160 240 160 240Q160 240 160 240V720Q160 720 160 720Q160 720 160 720Q160 720 160 720Q160 720 160 720V240Q160 240 160 240Q160 240 160 240Z"/></symbol>
+        <symbol id="i-frames" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M240 280H480V360H240ZM360 440H600V520H360ZM480 600H720V680H480ZM200 120Q167 120 143.5 143.5Q120 167 120 200V760Q120 793 143.5 816.5Q167 840 200 840H760Q793 840 816.5 816.5Q840 793 840 760V200Q840 167 816.5 143.5Q793 120 760 120ZM200 200H760Q760 200 760 200Q760 200 760 200V760Q760 760 760 760Q760 760 760 760H200Q200 760 200 760Q200 760 200 760V200Q200 200 200 200Q200 200 200 200ZM200 760Q200 760 200 760Q200 760 200 760V200Q200 200 200 200Q200 200 200 200Q200 200 200 200Q200 200 200 200V760Q200 760 200 760Q200 760 200 760Z"/></symbol>
+        <symbol id="i-apply-all" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M268 240 42 466 99 522 269 352 325 296ZM494 240 268 466 324 523 494 353 862 721 918 664ZM494 466 437 522 635 720 692 664Z"/></symbol>
+        <symbol id="i-create" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M440 280H520V440H680V520H520V680H440V520H280V440H440ZM200 120Q167 120 143.5 143.5Q120 167 120 200V760Q120 793 143.5 816.5Q167 840 200 840H760Q793 840 816.5 816.5Q840 793 840 760V200Q840 167 816.5 143.5Q793 120 760 120ZM200 200H760Q760 200 760 200Q760 200 760 200V760Q760 760 760 760Q760 760 760 760H200Q200 760 200 760Q200 760 200 760V200Q200 200 200 200Q200 200 200 200ZM200 760Q200 760 200 760Q200 760 200 760V200Q200 200 200 200Q200 200 200 200Q200 200 200 200Q200 200 200 200V760Q200 760 200 760Q200 760 200 760Z"/></symbol>
+        <symbol id="i-update" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M160 160V240H270L254 254Q202 300 181 359Q160 418 160 478Q160 589 226.5 675.5Q293 762 400 790V706Q328 680 284 617.5Q240 555 240 478Q240 433 257 390.5Q274 348 310 312L320 302V400H400V160ZM560 170V254Q632 280 676 342.5Q720 405 720 482Q720 527 703 569.5Q686 612 650 648L640 658V560H560V800H800V720H690L706 706Q755 657 777.5 599.5Q800 542 800 482Q800 371 733.5 284.5Q667 198 560 170Z"/></symbol>
+        <symbol id="i-build" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M756 120 537 339 621 423 840 204ZM204 120 120 204 396 480 328 548 300 520 249 571V489L221 461L100 582L128 610H210L160 660L302 802Q322 822 345 831Q368 840 392 840Q416 840 439 831Q462 822 482 802L390 710L440 660L412 632L480 564L570 654Q566 665 563.5 677Q561 689 561 701Q561 760 601.5 800.5Q642 841 701 841Q716 841 729.5 838Q743 835 757 829L658 730L730 658L829 757Q836 743 838.5 729.5Q841 716 841 701Q841 642 800.5 601.5Q760 561 701 561Q689 561 677 563Q665 565 654 570Z"/></symbol>
+        <symbol id="i-code" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M320 240 80 480 320 720 377 663 193 479 376 296ZM640 240 583 297 767 481 584 664 640 720 880 480Z"/></symbol>
+        <symbol id="i-run" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M320 200V760L760 480ZM400 480ZM400 346 610 480 400 614Z"/></symbol>
+        <symbol id="i-experimental" viewBox="0 -960 960 960"><path transform="scale(1,-1)" d="M200 120Q149 120 127.5 165.5Q106 211 138 250L360 520V760H320Q303 760 291.5 771.5Q280 783 280 800Q280 817 291.5 828.5Q303 840 320 840H640Q657 840 668.5 828.5Q680 817 680 800Q680 783 668.5 771.5Q657 760 640 760H600V520L822 250Q854 211 832.5 165.5Q811 120 760 120ZM200 200H760L520 492V760H440V492ZM480 480Z"/></symbol>
     </svg>
 
     <div id="content">

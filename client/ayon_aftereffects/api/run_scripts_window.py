@@ -7,6 +7,16 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from qtpy import QtCore, QtGui, QtWidgets
 
 from ayon_core.style import get_app_icon_path, load_stylesheet
+from ayon_core.tools.utils import get_qt_icon
+from ayon_core.ui.components import (
+    AYButton,
+    AYContainer,
+    AYHBoxLayout,
+    AYLabel,
+    AYTreeView,
+    AYVBoxLayout,
+)
+from ayon_core.ui.style_types import get_ayon_style_data
 
 from .scripts import ScriptItem, ScriptRunResult, ScriptService
 
@@ -16,6 +26,39 @@ log = logging.getLogger(__name__)
 # The call cannot be cancelled, so this bounds the wait, not the work.
 RUN_TIMEOUT_SECONDS = 300.0
 POLL_INTERVAL_MS = 100
+
+SCRIPT_ID_ROLE = QtCore.Qt.ItemDataRole.UserRole + 1
+
+_NAME_COLUMN = 0
+_PATH_COLUMN = 1
+_STATUS_COLUMN = 2
+_HEADER_LABELS = ("Name", "Path", "Status")
+
+
+def _status_icons() -> tuple[QtGui.QIcon, QtGui.QIcon]:
+    """Return the (ready, unavailable) status icons.
+
+    Colors come from the AYON style tokens so they follow the theme.
+
+    Returns:
+        Icons for a runnable script and for one that can't run.
+    """
+    style_data = get_ayon_style_data("AYProgressBar", "default")
+    ready_icon = get_qt_icon(
+        {
+            "type": "material-symbols",
+            "name": "check_circle",
+            "color": style_data.get("success-color", "#23e0a9"),
+        }
+    )
+    error_icon = get_qt_icon(
+        {
+            "type": "material-symbols",
+            "name": "error",
+            "color": style_data.get("failed-color", "#ffb4ab"),
+        }
+    )
+    return ready_icon, error_icon
 
 
 class RunScriptsWindow(QtWidgets.QDialog):
@@ -39,73 +82,113 @@ class RunScriptsWindow(QtWidgets.QDialog):
 
         self.setWindowTitle("Run Scripts")
         self.setWindowIcon(QtGui.QIcon(get_app_icon_path()))
+        self.setMinimumSize(480, 280)
         self.resize(720, 420)
 
-        self._scripts_view = QtWidgets.QTreeWidget(self)
-        self._scripts_view.setColumnCount(3)
-        self._scripts_view.setHeaderLabels(["Name", "Path", "Status"])
-        self._scripts_view.setRootIsDecorated(False)
-        self._scripts_view.setAlternatingRowColors(True)
-        self._scripts_view.setUniformRowHeights(True)
-        self._scripts_view.setSelectionMode(
-            QtWidgets.QAbstractItemView.SingleSelection
-        )
-        self._scripts_view.setEditTriggers(
-            QtWidgets.QAbstractItemView.NoEditTriggers
+        # Dialog surface, paints the AYON background under the widgets.
+        surface = AYContainer(
+            self,
+            layout=AYContainer.Layout.VBox,
+            variant=AYContainer.Variants.High_Dark,
+            layout_margin=12,
+            layout_spacing=8,
         )
 
-        header = self._scripts_view.header()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)
+        scripts_model = QtGui.QStandardItemModel(0, len(_HEADER_LABELS))
+        scripts_model.setHorizontalHeaderLabels(_HEADER_LABELS)
 
-        self._status_label = QtWidgets.QLabel(self)
-        self._status_label.setWordWrap(True)
+        scripts_view = AYTreeView(surface)
+        scripts_view.setModel(scripts_model)
+        scripts_view.setHeaderHidden(False)
+        scripts_view.setRootIsDecorated(False)
+        scripts_view.setIndentation(0)
+        scripts_view.setUniformRowHeights(True)
+        scripts_view.setSelectionMode(AYTreeView.SelectionMode.SingleSelection)
+        scripts_view.setEditTriggers(AYTreeView.EditTrigger.NoEditTriggers)
 
-        buttons_widget = QtWidgets.QWidget(self)
-        self._refresh_btn = QtWidgets.QPushButton("Refresh", buttons_widget)
-        self._run_btn = QtWidgets.QPushButton("Run", buttons_widget)
-        self._close_btn = QtWidgets.QPushButton("Close", buttons_widget)
-        self._run_btn.setEnabled(False)
+        # The AYON delegate reports no text width, so ResizeToContents
+        # would collapse columns. Use fixed starting widths instead.
+        header = scripts_view.header()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(
+            _PATH_COLUMN, QtWidgets.QHeaderView.ResizeMode.Stretch
+        )
+        scripts_view.setColumnWidth(_NAME_COLUMN, 180)
+        scripts_view.setColumnWidth(_STATUS_COLUMN, 240)
 
-        buttons_layout = QtWidgets.QHBoxLayout(buttons_widget)
-        buttons_layout.setContentsMargins(0, 0, 0, 0)
-        buttons_layout.setSpacing(10)
+        status_label = AYLabel("", dim=True, parent=surface)
+        status_label.setWordWrap(True)
+
+        refresh_btn = AYButton(
+            "Refresh",
+            variant=AYButton.Variants.Surface,
+            icon="refresh",
+            tooltip="Reload scripts from project settings",
+            parent=surface,
+        )
+        close_btn = AYButton(
+            "Close", variant=AYButton.Variants.Surface, parent=surface
+        )
+        run_btn = AYButton(
+            "Run",
+            variant=AYButton.Variants.Filled,
+            icon="play_arrow",
+            tooltip="Run the selected script in After Effects",
+            parent=surface,
+        )
+        run_btn.setEnabled(False)
+
+        buttons_layout = AYHBoxLayout(margin=0, spacing=4)
+        buttons_layout.addWidget(refresh_btn, 0)
         buttons_layout.addStretch(1)
-        buttons_layout.addWidget(self._refresh_btn, 0)
-        buttons_layout.addWidget(self._run_btn, 0)
-        buttons_layout.addWidget(self._close_btn, 0)
+        buttons_layout.addWidget(close_btn, 0)
+        buttons_layout.addWidget(run_btn, 0)
 
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
-        layout.addWidget(self._scripts_view, 1)
-        layout.addWidget(self._status_label, 0)
-        layout.addWidget(buttons_widget, 0)
+        surface.add_widget(scripts_view, stretch=1)
+        surface.add_widget(status_label, stretch=0)
+        surface.add_layout(buttons_layout, 0)
 
-        self._refresh_btn.clicked.connect(self.refresh)
-        self._run_btn.clicked.connect(self._on_run_clicked)
-        self._close_btn.clicked.connect(self.close)
-        self._scripts_view.itemSelectionChanged.connect(
-            self._on_selection_changed
-        )
-        self._scripts_view.itemDoubleClicked.connect(
-            self._on_item_double_clicked
-        )
+        main_layout = AYVBoxLayout(self, margin=0, spacing=0)
+        main_layout.addWidget(surface, 1)
 
-        self._poll_timer = QtCore.QTimer(self)
-        self._poll_timer.setInterval(POLL_INTERVAL_MS)
-        self._poll_timer.timeout.connect(self._on_poll_run)
+        poll_timer = QtCore.QTimer(self)
+        poll_timer.setInterval(POLL_INTERVAL_MS)
+
+        refresh_btn.clicked.connect(self.refresh)
+        run_btn.clicked.connect(self._on_run_clicked)
+        close_btn.clicked.connect(self.close)
+        scripts_view.selection_changed.connect(self._on_selection_changed)
+        scripts_view.double_clicked.connect(self._on_item_double_clicked)
+        poll_timer.timeout.connect(self._on_poll_run)
+
+        self._scripts_model = scripts_model
+        self._scripts_view = scripts_view
+        self._status_label = status_label
+        self._refresh_btn = refresh_btn
+        self._close_btn = close_btn
+        self._run_btn = run_btn
+        self._poll_timer = poll_timer
+
+        # Icons need a QApplication, so they are created on first refresh.
+        self._ready_icon: QtGui.QIcon | None = None
+        self._error_icon: QtGui.QIcon | None = None
+        self._first_show = True
 
     def showEvent(self, event) -> None:
-        """Apply the AYON stylesheet once the dialog is shown."""
+        """Apply the AYON stylesheet the first time the dialog is shown.
+
+        The AYON widgets paint themselves, the stylesheet covers the rest,
+        e.g. tooltips. The dialog is cached, so this only runs once.
+        """
         super().showEvent(event)
-        self.setStyleSheet(load_stylesheet())
+        if self._first_show:
+            self._first_show = False
+            self.setStyleSheet(load_stylesheet())
 
     def refresh(self) -> None:
         """Reload the manual scripts from settings."""
         self._items_by_id = {}
-        self._scripts_view.clear()
+        self._scripts_model.removeRows(0, self._scripts_model.rowCount())
 
         items = self._service.list_manual_items()
         if not items:
@@ -113,22 +196,39 @@ class RunScriptsWindow(QtWidgets.QDialog):
             self._run_btn.setEnabled(False)
             return
 
+        if self._ready_icon is None or self._error_icon is None:
+            self._ready_icon, self._error_icon = _status_icons()
+
         for item in items:
             self._items_by_id[item.script_id] = item
-            status = "Ready" if item.exists else item.error or "Unavailable"
-            tree_item = QtWidgets.QTreeWidgetItem(
-                [item.name, item.path, status]
-            )
-            tree_item.setData(0, QtCore.Qt.UserRole, item.script_id)
-            tree_item.setToolTip(1, item.path)
-            tree_item.setToolTip(2, status)
-            self._scripts_view.addTopLevelItem(tree_item)
+            if item.exists:
+                status = "Ready"
+                status_icon = self._ready_icon
+            else:
+                status = item.error or "Unavailable"
+                status_icon = self._error_icon
 
-        self._scripts_view.setCurrentItem(self._scripts_view.topLevelItem(0))
+            name_item = QtGui.QStandardItem(item.name)
+            name_item.setData(item.script_id, SCRIPT_ID_ROLE)
+            name_item.setToolTip(item.name)
+
+            path_item = QtGui.QStandardItem(item.path)
+            path_item.setToolTip(item.path)
+
+            status_item = QtGui.QStandardItem(status)
+            status_item.setIcon(status_icon)
+            status_item.setToolTip(status)
+
+            row = [name_item, path_item, status_item]
+            for column_item in row:
+                column_item.setEditable(False)
+            self._scripts_model.appendRow(row)
+
+        self._scripts_view.setCurrentIndex(self._scripts_model.index(0, 0))
         self._status_label.setText("Select a script to run.")
         self._on_selection_changed()
 
-    def _on_selection_changed(self) -> None:
+    def _on_selection_changed(self, *_args) -> None:
         """Update UI state from the current selection."""
         item = self._get_selected_item()
         can_run = bool(item and item.exists)
@@ -230,9 +330,10 @@ class RunScriptsWindow(QtWidgets.QDialog):
 
     def _get_selected_item(self) -> ScriptItem | None:
         """Return the currently selected script item."""
-        selected_items = self._scripts_view.selectedItems()
-        if not selected_items:
+        selection_model = self._scripts_view.selectionModel()
+        selected_rows = selection_model.selectedRows(_NAME_COLUMN)
+        if not selected_rows:
             return None
 
-        script_id = selected_items[0].data(0, QtCore.Qt.UserRole)
+        script_id = selected_rows[0].data(SCRIPT_ID_ROLE)
         return self._items_by_id.get(script_id)

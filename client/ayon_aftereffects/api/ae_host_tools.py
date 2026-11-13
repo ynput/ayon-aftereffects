@@ -2,7 +2,6 @@ from ayon_core.tools.utils.host_tools import HostToolsHelper
 from ayon_core.tools.utils.lib import qt_app_context
 
 from .lib import raise_window_to_front
-from .run_scripts_window import RunScriptsWindow
 from .scripts import get_script_service
 
 _TOOL_RUN_SCRIPTS = "run_scripts"
@@ -25,6 +24,10 @@ class AEHostToolsHelper(HostToolsHelper):
             Cached run scripts dialog.
         """
         if self._run_scripts_tool is None:
+            # Imported here, as ae_host_tools loads at startup and the
+            # dialog needs the ayon_core.ui widgets of core 1.10.0+.
+            from .run_scripts_window import RunScriptsWindow
+
             self._run_scripts_tool = RunScriptsWindow(
                 service=get_script_service(),
                 parent=parent or self._parent,

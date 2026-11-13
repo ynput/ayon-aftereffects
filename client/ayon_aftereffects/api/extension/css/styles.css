@@ -1,36 +1,31 @@
 /*
-AYON panel styling.
-
-Colours are the AYON Qt design tokens from
-ayon-core/client/ayon_core/style/data.json, so the panel matches the rest of
-the AYON tooling instead of the host application.
-
-themeManager.js still injects After Effects' skin values into .hostFontSize
-and .hostFontFamily. Buttons keep those classes on purpose: type scales with
-the artist's AE UI setting while colour stays AYON's. Putting `hostElt` back
-on <body> hands background and text colour back to After Effects.
-
-Layout is pure CSS grid with auto-fit, so reflow happens in the layout engine
-with no JS and no measured breakpoints. After Effects only hands CEP panels a
-new viewport size when a drag is released, so there is nothing to hook for a
-live resize, but whatever size arrives is laid out correctly on arrival.
+AYON panel styling, using the design tokens of ayon-core's ayon_core/ui
+(ayon_style.json), the same ones the Workfiles tool and the Launcher use.
 */
 
+@font-face {
+    font-family: "Noto Sans";
+    src: url("fonts/NotoSans-Medium.ttf") format("truetype");
+}
+
 :root {
-    --ayon-bg: #2C313A;
-    --ayon-button: rgb(67, 74, 86);
-    --ayon-button-hover: rgb(81, 86, 97);
-    --ayon-button-disabled: #434a56;
-    --ayon-font: #D3D8DE;
-    --ayon-font-hover: #F0F2F5;
-    --ayon-font-disabled: #5b6779;
-    --ayon-font-dim: #99A3B2;
-    --ayon-border: #373D48;
-    --ayon-focus: rgb(92, 173, 214);
-    --ayon-error: #AD2E2E;
-    --ayon-info: rgb(63, 98, 121);
-    --ayon-info-hover: rgb(81, 146, 181);
-    --ayon-radius: 3px;
+    --ayon-bg: #272d35;
+    --ayon-button: #424a57;
+    --ayon-button-hover: #4d5560;
+    --ayon-button-active: #535965;
+    --ayon-font: #f4f5f5;
+    --ayon-font-variant: #c1c7ce;
+    --ayon-font-dim: #8b9198;
+    --ayon-border: #41474d;
+    --ayon-primary: #8fceff;
+    --ayon-primary-hover: #83c1f1;
+    --ayon-on-primary: #00344f;
+    --ayon-primary-container: #1c4154;
+    --ayon-on-primary-container: #ebf5ff;
+    --ayon-error-container: #93000a;
+    --ayon-on-error-container: #ffdad6;
+    --ayon-disabled-opacity: 0.5;
+    --ayon-radius: 4px;
     --ayon-gap: 4px;
 }
 
@@ -47,6 +42,7 @@ body {
     box-sizing: border-box;
     background: var(--ayon-bg);
     color: var(--ayon-font);
+    font-family: "Noto Sans", sans-serif;
 }
 
 #content {
@@ -69,7 +65,7 @@ body {
     margin: 0 0 6px 0;
     padding-bottom: 4px;
     border-bottom: 1px solid var(--ayon-border);
-    color: var(--ayon-font-dim);
+    color: var(--ayon-font-variant);
     font-size: 0.8em;
     font-weight: 500;
     letter-spacing: 0.04em;
@@ -99,6 +95,7 @@ free-sizing column instead. Still pure CSS, still no JS on resize.
 
 /* ── Buttons ─────────────────────────────────────────────────────────── */
 
+/* Buttons keep .hostFontSize, so text follows After Effects' UI size. */
 #content button {
     display: flex;
     align-items: center;
@@ -118,40 +115,29 @@ free-sizing column instead. Still pure CSS, still no JS on resize.
 
 #content button:hover:not(:disabled) {
     background: var(--ayon-button-hover);
-    color: var(--ayon-font-hover);
 }
 
 #content button:active:not(:disabled) {
-    background: var(--ayon-button);
+    background: var(--ayon-button-active);
 }
 
 #content button:focus {
-    outline: 1px solid var(--ayon-focus);
-    outline-offset: -1px;
+    outline: 2px solid var(--ayon-primary);
+    outline-offset: -2px;
 }
 
 #content button:disabled {
-    background: var(--ayon-button-disabled);
-    color: var(--ayon-font-disabled);
+    opacity: var(--ayon-disabled-opacity);
     cursor: default;
 }
 
 .btn-icon {
     flex: 0 0 auto;
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
     /* margin, not flex `gap`: that is Chrome 84 and CEP 9 is Chrome 61 */
-    margin-right: 8px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    opacity: 0.85;
-}
-
-#content button:hover:not(:disabled) .btn-icon {
-    opacity: 1;
+    margin-right: 6px;
+    fill: currentColor;
 }
 
 /*
@@ -175,8 +161,8 @@ otherwise refuse to shrink below its text, pushing the button out of track.
     margin-top: 8px;
     padding: 4px 5px;
     border-radius: var(--ayon-radius);
-    background: var(--ayon-info);
-    color: var(--ayon-font-hover);
+    background: var(--ayon-primary-container);
+    color: var(--ayon-on-primary-container);
     font-size: 0.85em;
 }
 
@@ -199,21 +185,25 @@ otherwise refuse to shrink below its text, pushing the button out of track.
     padding: 2px 8px;
     border: 0 solid transparent;
     border-radius: var(--ayon-radius);
-    background: var(--ayon-info-hover);
-    color: var(--ayon-font-hover);
+    background: var(--ayon-primary);
+    color: var(--ayon-on-primary);
     font-family: inherit;
     font-size: inherit;
     cursor: pointer;
 }
 
+#reconnect-button:hover:not(:disabled) {
+    background: var(--ayon-primary-hover);
+}
+
 #reconnect-button:disabled {
-    opacity: 0.5;
+    opacity: var(--ayon-disabled-opacity);
     cursor: default;
 }
 
 #reconnect-button:focus {
-    outline: 1px solid var(--ayon-focus);
-    outline-offset: -1px;
+    outline: 2px solid var(--ayon-primary);
+    outline-offset: 1px;
 }
 
 /* ── Status line ─────────────────────────────────────────────────────── */
@@ -234,8 +224,8 @@ otherwise refuse to shrink below its text, pushing the button out of track.
 #status.is-error {
     padding: 5px 6px;
     border-radius: var(--ayon-radius);
-    background: var(--ayon-error);
-    color: var(--ayon-font-hover);
+    background: var(--ayon-error-container);
+    color: var(--ayon-on-error-container);
 }
 
 /*
