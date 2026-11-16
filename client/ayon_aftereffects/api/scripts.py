@@ -4,8 +4,7 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from ayon_core.lib import Logger, StringTemplate
-from ayon_core.lib.profiles_filtering import validate_value_by_regexes
+from ayon_core.lib import Logger, StringTemplate, filter_profiles
 from ayon_core.pipeline import Anatomy
 from ayon_core.pipeline.context_tools import (
     get_current_context_template_data,
@@ -17,32 +16,6 @@ from .ws_stub import ConnectionNotEstablishedYet, get_stub
 log = Logger.get_logger("ayon_aftereffects.scripts")
 
 _SUPPORTED_EXTENSIONS = (".js", ".jsx")
-
-
-def _matches_task(
-    config: dict[str, Any],
-    task_name: str | None,
-    task_type: str | None,
-) -> bool:
-    """Return whether a script config applies to the given task.
-
-    An empty filter matches every task. Task types must match exactly,
-    task names are full-match regexes, like in core's profile filtering.
-
-    Args:
-        config: Script config from project settings.
-        task_name: Current task name, `None` when no task is set.
-        task_type: Current task type, `None` when no task is set.
-
-    Returns:
-        Whether the script should be offered in this task.
-    """
-    task_types = config.get("task_types") or []
-    if task_types and task_type not in task_types:
-        return False
-
-    task_names = config.get("task_names") or []
-    return validate_value_by_regexes(task_name, task_names) != -1
 
 
 @dataclass(frozen=True)
@@ -84,6 +57,32 @@ class ScriptRunResult:
 class ScriptService:
     """Resolve and execute configured After Effects scripts."""
 
+    @staticmethod
+    def _matches_task(
+        config: dict[str, Any],
+        task_name: str | None,
+        task_type: str | None,
+    ) -> bool:
+        """Return whether a script config applies to the given task.
+
+        Uses core's profile filtering, so an empty list or `*` matches every
+        task, and values are full-match regexes like in other AYON profiles.
+
+        Args:
+            config: Script config from project settings.
+            task_name: Current task name, `None` when no task is set.
+            task_type: Current task type, `None` when no task is set.
+
+        Returns:
+            Whether the script should be offered in this task.
+        """
+        profile = filter_profiles(
+            [config],
+            {"task_types": task_type, "task_names": task_name},
+            logger=log,
+        )
+        return profile is not None
+
     def list_items(self, auto: bool | None = None) -> list[ScriptItem]:
         """Return resolved script items from project settings.
 
@@ -114,7 +113,7 @@ class ScriptService:
             if auto is not None and item_auto != auto:
                 continue
 
-            if not _matches_task(config, task_name, task_type):
+            if not self._matches_task(config, task_name, task_type):
                 log.debug(
                     "Skipping script %s, not configured for task %s (%s).",
                     config["name"],
