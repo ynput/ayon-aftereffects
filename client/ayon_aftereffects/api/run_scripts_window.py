@@ -127,7 +127,10 @@ class RunScriptsWindow(QtWidgets.QDialog):
             parent=surface,
         )
         close_btn = AYButton(
-            "Close", variant=AYButton.Variants.Surface, parent=surface
+            "Close",
+            variant=AYButton.Variants.Surface,
+            icon="close",
+            parent=surface,
         )
         run_btn = AYButton(
             "Run",
