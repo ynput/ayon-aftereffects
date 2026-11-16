@@ -137,6 +137,15 @@
                 $status.text(message || "").toggleClass("is-error", !!isError);
             }
 
+            // A route that raises in Python rejects with {type, message},
+            // while wsrpc.js rejects with a plain string.
+            function errorText(error) {
+                if (error && typeof error === "object") {
+                    return error.message || error.type || "Unknown error";
+                }
+                return String(error);
+            }
+
             /**
              * wsrpc reconnects on its own every 5s (main.js sets the
              * interval). None of this replaces that; it only makes the state
@@ -226,7 +235,7 @@
                         done,
                         function (error) {
                             done();
-                            setStatus(error, true);
+                            setStatus(errorText(error), true);
                         }
                     );
                 });
