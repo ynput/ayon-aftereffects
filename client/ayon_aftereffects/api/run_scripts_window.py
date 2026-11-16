@@ -311,9 +311,13 @@ class RunScriptsWindow(QtWidgets.QDialog):
         return result.message
 
     def closeEvent(self, event) -> None:
-        """Never block on a running script when the dialog is closed."""
-        self._poll_timer.stop()
-        self._future = None
+        """Never block on a running script when the dialog is closed.
+
+        The dialog is cached, so it is handed back now. Otherwise it would
+        reopen with Refresh and the list still disabled. A script that is
+        still running keeps going in the background, as after a timeout.
+        """
+        self._stop_waiting()
         super().closeEvent(event)
 
     def _set_running(self, running: bool, message: str = "") -> None:
