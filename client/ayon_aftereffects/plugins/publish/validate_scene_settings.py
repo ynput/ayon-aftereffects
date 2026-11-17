@@ -72,7 +72,7 @@ class ValidateSceneSettings(
             return
 
         if instance.data.get("render_queue_error"):
-            self.log.debug("Render Queue problem, see Validate Render Queue")
+            self.log.debug("Render Queue problem, see Validate Render Queue.")
             return
 
         entity: dict = (
