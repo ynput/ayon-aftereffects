@@ -959,10 +959,14 @@ function removeDuplicateRenderQueueItems(comp_id) {
     /**
      * Keep a single render queue item for a composition, remove the rest.
      *
-     * Keeps the last item that is not rendered yet (status other than
-     * DONE). If every item is DONE, keeps the last one. The kept item may
-     * be one AYON never configured, so its output folder and file name are
-     * set the same way as when the comp is first added to the queue.
+     * Keeps the last item whose output can still be edited, see
+     * _canEditOutput(). The kept item may be one AYON never configured, so
+     * its output folder and file name are set the same way as when the comp
+     * is first added to the queue.
+     *
+     * If no item can be edited, keeps the last DONE item as it is, since
+     * render() and getRenderInfo() re-queue DONE items and nothing re-queues
+     * stopped ones. Only when every item is stopped is the last one kept.
      *
      * Args:
      *    comp_id (int): Project item id of composition.
@@ -977,13 +981,18 @@ function removeDuplicateRenderQueueItems(comp_id) {
         return _prepareSingleValue(0);
     }
 
-    var keep = items[items.length - 1];
+    var keep = null;
+    var lastDone = null;
     for (var i = items.length - 1; i >= 0; --i) {
-        if (items[i].status != RQItemStatus.DONE) {
+        if (_canEditOutput(items[i])) {
             keep = items[i];
             break;
         }
+        if (!lastDone && items[i].status == RQItemStatus.DONE) {
+            lastDone = items[i];
+        }
     }
+    keep = keep || lastDone || items[items.length - 1];
 
     var removed = 0;
     app.beginUndoGroup("Remove Duplicate Render Queue Items");
@@ -994,11 +1003,32 @@ function removeDuplicateRenderQueueItems(comp_id) {
                 removed += 1;
             }
         }
-        _setOutputPath(comp_id);
+        if (_canEditOutput(keep)) {
+            _setOutputPath(comp_id);
+        }
     } finally {
         app.endUndoGroup();
     }
     return _prepareSingleValue(removed);
+}
+
+function _canEditOutput(renderQueueItem) {
+    /**
+     * Whether AE lets a script change this item's Output Module.
+     *
+     * AE refuses while the item is rendering, stopped or done.
+     *
+     * Args:
+     *    renderQueueItem (RenderQueueItem): Item to check.
+     * Returns:
+     *    (bool): True when the item is queued, unqueued or needs output.
+     */
+    var status = renderQueueItem.status;
+    return (
+        status == RQItemStatus.QUEUED ||
+        status == RQItemStatus.UNQUEUED ||
+        status == RQItemStatus.NEEDS_OUTPUT
+    );
 }
 
 function _setOutputPath(comp_id, path) {

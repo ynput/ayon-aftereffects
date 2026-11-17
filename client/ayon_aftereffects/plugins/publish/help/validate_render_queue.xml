@@ -12,8 +12,8 @@ This usually happens when the composition is queued again after a local render.
 ### How to repair?
 
 - Click **Repair** to keep one item and remove the others, then **refresh** the publisher (circular arrow button).
-  - It keeps the last item that hasn't been rendered yet, or the last one if all of them are done.
-  - It also sets that item's output folder and file name, the same way AYON does when the instance is created.
+  - It keeps the last item that is still waiting to render, and sets its output folder and file name the same way AYON does when the instance is created.
+  - If none is waiting, it keeps the last done item as it is, since After Effects doesn't allow changing it.
 - Or remove the extra items yourself in *Window > Render Queue*, make sure the remaining one has *Output To* set, then refresh the publisher.
 </description>
 <detail>
