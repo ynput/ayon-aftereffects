@@ -7,8 +7,7 @@ import attr
 import pyblish.api
 
 from ayon_core.pipeline import publish
-from ayon_core.pipeline.publish import RenderInstance
-from ayon_core.pipeline import PublishValidationError
+from ayon_core.pipeline.publish import PublishError, RenderInstance
 
 from ayon_aftereffects.api import get_stub
 
@@ -62,12 +61,28 @@ class CollectAERender(publish.AbstractCollectRender):
         app_version = app_version[0:4]
 
         current_file = context.data["currentFile"]
-        version = context.data["version"]
+        version = context.data.get("version")
+        if version is None:
+            raise PublishError(
+                "Workfile version was not collected.",
+                title="Missing workfile version",
+                description=(
+                    "The version of the workfile could not be collected, "
+                    "so the render can't be versioned.\n\n"
+                    "- Check that the workfile name has a version, "
+                    "like `sh010_comp_v001.aep`.\n"
+                    "- Ask your AYON admin to check that `aftereffects` is "
+                    "listed in **Core > Publish plugins > Collect Version "
+                    "from Workfile > Host names** (*Collect Scene Version* "
+                    "in older AYON releases)."
+                ),
+            )
 
         project_entity = context.data["projectEntity"]
 
         compositions = stub.get_items(True)
         compositions_by_id = {item.id: item for item in compositions}
+        queued_comp_ids = None
         for inst in context:
             if not inst.data.get("active", True):
                 continue
@@ -96,10 +111,31 @@ class CollectAERender(publish.AbstractCollectRender):
 
             task_name = inst.data.get("task")
 
-            render_queue = stub.get_render_info(comp_id)
+            try:
+                render_queue = stub.get_render_info(comp_id)
+                queue_error = "No file extension set in Render Queue"
+            except ValueError as exc:
+                render_queue = []
+                queue_error = str(exc)
             if not render_queue:
-                raise PublishValidationError(
-                    "No file extension set in Render Queue")
+                # left for ValidateRenderQueue to report, so a broken queue
+                # for one comp does not stop collecting the others
+                if queued_comp_ids is None:
+                    queued_comp_ids = [
+                        item.id for item in stub.get_render_queue_comps()
+                    ]
+                comp = compositions_by_id.get(comp_id)
+                inst.data.update({
+                    "comp_id": comp_id,
+                    "comp_name": comp.name if comp else str(comp_id),
+                    "render_queue_error": queue_error,
+                    "render_queue_item_count": queued_comp_ids.count(comp_id),
+                })
+                self.log.warning(
+                    f"Render Queue problem for '{inst.data['comp_name']}': "
+                    f"{queue_error}"
+                )
+                continue
             render_item = render_queue[0]
 
             instance_families = inst.data.get("families", [])

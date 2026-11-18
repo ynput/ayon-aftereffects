@@ -30,6 +30,10 @@ class ValidateRenderedFiles(pyblish.api.InstancePlugin):
 
     def process(self, instance):
         """Plugin entry point."""
+        if instance.data.get("render_queue_error"):
+            self.log.debug("Render Queue problem, see Validate Render Queue.")
+            return
+
         use_existing_frames = (
             instance.data["creator_attributes"]
                          ["render_target"] == "frames"
