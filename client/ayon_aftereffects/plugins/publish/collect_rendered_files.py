@@ -31,6 +31,10 @@ class CollectExistingFrames(pyblish.api.InstancePlugin):
     settings_category = "aftereffects"
 
     def process(self, instance):
+        if instance.data.get("render_queue_error"):
+            self.log.debug("Render Queue problem, see Validate Render Queue")
+            return
+
         use_existing_frames = (
             instance.data["creator_attributes"]
                          ["render_target"] == "frames"
