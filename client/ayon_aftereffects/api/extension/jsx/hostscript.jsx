@@ -551,50 +551,43 @@ function getRenderInfo(comp_id){
     var comp_name = item.name;
     var output_metadata = [];
     var original_file_names = [];
+    var comp_id_count = 0;
     try{
+        // Check the count before re-queuing anything, so a rejected comp
+        // keeps its DONE items as they are and Repair can tell them apart.
+        var comp_items = _getRenderQueueItems(comp_id);
+        if (comp_items.length > 1){
+            return _prepareError("There cannot be more items in Render Queue for '" + comp_name + "'!")
+        }
+
         // render_item.duplicate() should create new item on renderQueue
         // BUT it works only sometimes, there are some weird synchronization issue
         // this method will be called always before render, so prepare items here
         // for render to spare the hassle
-        for (i = 1; i <= app.project.renderQueue.numItems; ++i){
-            var render_item = app.project.renderQueue.item(i);
-            if (render_item.comp.id != comp_id){
-                continue;
-            }
-
+        for (var i = 0; i < comp_items.length; ++i){
+            var render_item = comp_items[i];
             if (render_item.status == RQItemStatus.DONE){
-                // AE's duplicate() resets Output Module config to user defaults
-                // (mp4/H.264). STRING_SETTABLE alone does not reliably restore
-                // Format/Codec on the duplicate — aerender (farm) then renders
-                // mp4 even though we wanted JPG. To survive a round-trip, we
-                // stash the OM as a throw-away template before duplicate() and
-                // applyTemplate() on the new item. setSettings() is layered on
-                // top to carry any artist customizations.
-                for (j = 1; j<= render_item.numOutputModules; ++j){
-                    var item = render_item.outputModule(j);
-                    original_file_names.push(item.file);
+                // AE's duplicate() resets Output Module config to user
+                // defaults, _duplicate_with_settings() reapplies it.
+                for (var j = 1; j <= render_item.numOutputModules; ++j){
+                    original_file_names.push(render_item.outputModule(j).file);
                 }
-                render_item = _duplicate_with_settings(render_item);
-                continue;
+                _duplicate_with_settings(render_item);
             }
         }
 
-        // properly validate as `numItems` won't change magically
-        var comp_id_count = 0;
-        for (i = 1; i <= app.project.renderQueue.numItems; ++i){
-            var render_item = app.project.renderQueue.item(i);
-            if (render_item.comp.id != comp_id){
-                continue;
-            }
-            comp_id_count += 1;
-
-            for (j = 1; j<= render_item.numOutputModules; ++j){
-                var item = render_item.outputModule(j);
+        // read the queue again, the duplicate is not always added
+        comp_items = _getRenderQueueItems(comp_id);
+        comp_id_count = comp_items.length;
+        for (var i = 0; i < comp_items.length; ++i){
+            var render_item = comp_items[i];
+            for (var j = 1; j <= render_item.numOutputModules; ++j){
+                var output_module = render_item.outputModule(j);
                 if(original_file_names.length > j-1){
-                    item.file = original_file_names[j-1];
+                    output_module.file = original_file_names[j-1];
                 }
 
-                var file_url = item.file.toString();
+                var file_url = output_module.file.toString();
                 output_metadata.push(
                     JSON.stringify({
                         "file_name": file_url,
@@ -922,6 +915,29 @@ function _getRenderQueueItem(comp_id) {
     return undefined;
 }
 
+function _getRenderQueueItems(comp_id) {
+    /**
+     * Return all render queue items for a composition id.
+     *
+     * The list is a snapshot, so callers can duplicate or remove items
+     * without the queue indexes shifting under them.
+     *
+     * Args:
+     *    comp_id (int): Project item id of composition.
+     * Returns:
+     *    (Array): Matching RenderQueueItems, in queue order.
+     */
+    var items = [];
+    var renderQueue = app.project.renderQueue;
+    for (var i = 1; i <= renderQueue.numItems; ++i) {
+        var renderQueueItem = renderQueue.item(i);
+        if (renderQueueItem.comp && renderQueueItem.comp.id == comp_id) {
+            items.push(renderQueueItem);
+        }
+    }
+    return items;
+}
+
 function removeCompFromRenderQueue(comp_id) {
     /**
      * Remove a composition from render queue if present.
@@ -937,6 +953,82 @@ function removeCompFromRenderQueue(comp_id) {
         return _prepareSingleValue(true);
     }
     return _prepareSingleValue(false);
+}
+
+function removeDuplicateRenderQueueItems(comp_id) {
+    /**
+     * Keep a single render queue item for a composition, remove the rest.
+     *
+     * Keeps the last item whose output can still be edited, see
+     * _canEditOutput(). The kept item may be one AYON never configured, so
+     * its output folder and file name are set the same way as when the comp
+     * is first added to the queue.
+     *
+     * If no item can be edited, keeps the last DONE item as it is, since
+     * render() and getRenderInfo() re-queue DONE items and nothing re-queues
+     * stopped ones. Only when every item is stopped is the last one kept.
+     *
+     * Args:
+     *    comp_id (int): Project item id of composition.
+     * Returns:
+     *    (str): Prepared JSON response with the number of removed items.
+     */
+    if (!_getComp(comp_id)) {
+        return _prepareError("Composition with '" + comp_id + "' wasn't found!");
+    }
+    var items = _getRenderQueueItems(comp_id);
+    if (items.length == 0) {
+        return _prepareSingleValue(0);
+    }
+
+    var keep = null;
+    var lastDone = null;
+    for (var i = items.length - 1; i >= 0; --i) {
+        if (_canEditOutput(items[i])) {
+            keep = items[i];
+            break;
+        }
+        if (!lastDone && items[i].status == RQItemStatus.DONE) {
+            lastDone = items[i];
+        }
+    }
+    keep = keep || lastDone || items[items.length - 1];
+
+    var removed = 0;
+    app.beginUndoGroup("Remove Duplicate Render Queue Items");
+    try {
+        for (var i = 0; i < items.length; ++i) {
+            if (items[i] !== keep) {
+                items[i].remove();
+                removed += 1;
+            }
+        }
+        if (_canEditOutput(keep)) {
+            _setOutputPath(comp_id);
+        }
+    } finally {
+        app.endUndoGroup();
+    }
+    return _prepareSingleValue(removed);
+}
+
+function _canEditOutput(renderQueueItem) {
+    /**
+     * Whether AE lets a script change this item's Output Module.
+     *
+     * AE refuses while the item is rendering, stopped or done.
+     *
+     * Args:
+     *    renderQueueItem (RenderQueueItem): Item to check.
+     * Returns:
+     *    (bool): True when the item is queued, unqueued or needs output.
+     */
+    var status = renderQueueItem.status;
+    return (
+        status == RQItemStatus.QUEUED ||
+        status == RQItemStatus.UNQUEUED ||
+        status == RQItemStatus.NEEDS_OUTPUT
+    );
 }
 
 function _setOutputPath(comp_id, path) {
@@ -1011,20 +1103,25 @@ function addCompToRenderQueue(comp_id, output_path) {
 function render(target_folder, comp_id) {
     var out_dir = new Folder(target_folder);
     var out_dir = out_dir.fsName;
-    for (i = 1; i <= app.project.renderQueue.numItems; ++i){
-        var render_item = app.project.renderQueue.item(i);
+    // Snapshot the queue first: re-queuing a DONE item removes it and
+    // appends a copy, which shifts the index of every item after it.
+    var renderQueue = app.project.renderQueue;
+    var queue_items = [];
+    for (var i = 1; i <= renderQueue.numItems; ++i){
+        queue_items.push(renderQueue.item(i));
+    }
+    for (var i = 0; i < queue_items.length; ++i){
+        var render_item = queue_items[i];
         var composition = render_item.comp;
         if (composition.id == comp_id){
             if (render_item.status == RQItemStatus.DONE){
-                // Preserve Output Module config across duplicate(). See
-                // getRenderInfo() for the full rationale. Same template-stash
-                // + setSettings layering is used here.
+                // see getRenderInfo(), the copy keeps the Output Module settings
                 render_item = _duplicate_with_settings(render_item);
             }
 
             render_item.render = true;
 
-            var om1 = app.project.renderQueue.item(i).outputModule(1);
+            var om1 = render_item.outputModule(1);
             var file_name = File.decode( om1.file.name ).replace('℗', ''); // Name contains special character, space?
 
             var targetFolder = new Folder(target_folder);
@@ -1156,8 +1253,9 @@ function _duplicate_with_settings(render_item) {
     /**
      * Duplicate a render queue item while preserving Output Module settings.
      *
-     * AE's duplicate() resets Output Module config to user defaults.
-     * To survive a round-trip, we repply OM settings.
+     * AE's duplicate() resets Output Module config to user defaults, so
+     * the settings are read with getSettings() before and reapplied with
+     * setSettings() after.
      *
      * Args:
      *     render_item (RenderQueueItem): The render queue item to duplicate.
@@ -1174,7 +1272,7 @@ function _duplicate_with_settings(render_item) {
     }
 
     var new_item = render_item.duplicate();
-    render_item.remove();  
+    render_item.remove();
 
     for (var j = 1; j <= new_item.numOutputModules; ++j) {
         var new_om = new_item.outputModule(j);
