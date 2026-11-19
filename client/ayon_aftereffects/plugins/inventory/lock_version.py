@@ -26,7 +26,6 @@ def _set_version_locked(
             all_items=all_items,
             items_meta=items_meta,
         )
-        container["version_locked"] = locked
 
 
 class LockVersions(InventoryAction):
