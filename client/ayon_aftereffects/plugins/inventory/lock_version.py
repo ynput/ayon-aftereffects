@@ -54,11 +54,5 @@ class UnlockVersions(InventoryAction):
         return container.get("version_locked") is True
 
     def process(self, containers: list[dict[str, Any]]) -> bool:
-        to_unlock = [
-            container
-            for container in containers
-            if container.get("version_locked") is True
-        ]
-        if to_unlock:
-            _set_version_locked(to_unlock, False)
+        _set_version_locked(to_unlock, False)
         return True
