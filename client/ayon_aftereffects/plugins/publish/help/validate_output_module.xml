@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+<error id="main">
+<title>Output Module</title>
+<description>
+## Output Module is not valid
+
+Composition '{comp_name}' cannot be rendered with its current Render Queue
+Output Module.
+
+{problems}
+
+### How to repair?
+
+Open `Window > Render Queue`, select the item of the composition, open
+`Output Module` and pick one of the allowed presets: {allowed}
+
+    The output file name is built from the product name '{product_name}'.
+</description>
+<detail>
+### __Detailed Info__ (optional)
+
+Format, codec, file name and frame numbering of the Render Queue item are
+compared with the presets configured in
+`ayon+settings://aftereffects/publish/ValidateOutputModule`.
+
+Frame sequences need AE's `[#####]` token, not a printf pattern such as
+`%05d`.
+</detail>
+</error>
+<error id="name">
+<title>Output file name</title>
+<description>
+## Output file name does not match the product name
+
+Output Module {index} of '{comp_name}' writes '{actual}', but the product
+is '{product_name}'.
+
+{problems}
+
+### How to repair?
+
+Rename the file in the Render Queue `Output To` field, or change the file
+name pattern of the preset in
+`ayon+settings://aftereffects/publish/ValidateOutputModule`.
+</description>
+</error>
+<error id="extension">
+<title>Output extension</title>
+<description>
+## Output extension is not allowed
+
+Output Module {index} writes '{actual}', expected {expected}.
+
+{problems}
+
+### How to repair?
+
+Change the format in the Output Module, or add the extension to the preset
+in `ayon+settings://aftereffects/publish/ValidateOutputModule`.
+</description>
+</error>
+<error id="sequence">
+<title>Frame numbering</title>
+<description>
+## Frame numbering does not match the format
+
+Output Module {index} writes '{actual}'.
+
+{problems}
+
+### How to repair?
+
+Use a `[#####]` token in the file name for frame sequences, and a plain
+name for single file formats. Or change the preset in
+`ayon+settings://aftereffects/publish/ValidateOutputModule`.
+</description>
+</error>
+<error id="not_allowed">
+<title>Output format</title>
+<description>
+## Output format is not allowed
+
+Output Module {index} uses '{actual}'.
+
+{problems}
+
+### How to repair?
+
+Pick one of the allowed presets: {allowed}
+
+    Or add the format to
+    `ayon+settings://aftereffects/publish/ValidateOutputModule`.
+</description>
+</error>
+</root>

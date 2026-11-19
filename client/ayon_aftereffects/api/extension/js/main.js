@@ -296,6 +296,15 @@ function main(websocket_url){
             });
     });
 
+    RPC.addRoute('AfterEffects.get_output_module_info', function (data) {
+        log.warn('Server called client route "get_output_module_info":', data);
+        return runEvalScript("getOutputModuleInfo(" + data.comp_id +")")
+            .then(function(result){
+                log.warn("get_output_module_info: " + result);
+                return result;
+            });
+    });
+
     RPC.addRoute('AfterEffects.get_audio_url', function (data) {
         log.warn('Server called client route "get_audio_url":', data);
         return runEvalScript("getAudioUrlForComp(" + data.item_id + ")")

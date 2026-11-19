@@ -612,6 +612,103 @@ function getRenderInfo(comp_id){
     return '[' + output_metadata.join() + ']';
 }
 
+function _outputSetting(settings, names) {
+    /**
+     * Read a single Output Module setting in an AE version independent way.
+     *
+     * Newer AE versions return the format options flat next to
+     * "Output File Info" (settings["Format"]), while older versions nest
+     * them in the "Video Output" group. In newer versions "Video Output"
+     * is a plain flag ("true"), not an object, so it must not be indexed.
+     *
+     * Args:
+     *     settings (dict): Result of getSettings(STRING).
+     *     names (list): Setting names to try, in order.
+     * Returns:
+     *     (str): Setting value or empty string.
+     */
+    for (var i = 0; i < names.length; ++i) {
+        var value = settings[names[i]];
+        if (value === undefined || value === null || typeof value === "object") {
+            continue;
+        }
+        return String(value);
+    }
+
+    var group = settings["Video Output"];
+    if (group && typeof group === "object") {
+        for (var j = 0; j < names.length; ++j) {
+            var nested = group[names[j]];
+            if (nested === undefined || nested === null) {
+                continue;
+            }
+            return String(nested);
+        }
+    }
+    return "";
+}
+
+function getOutputModuleInfo(comp_id){
+    /**
+     * Read the Output Module settings of the Render Queue item of `comp_id`.
+     *
+     * Used by the Validate Output Module plugin to check format, codec and
+     * output file name before a render starts. Format and codec are the
+     * labels shown in the Output Module dialog, so they are English strings
+     * such as "H.264" or "OpenEXR" and can be empty for formats without a
+     * codec. The full `settings` object is passed along so a studio can
+     * discover the exact keys of its AE version and locale.
+     *
+     * Args:
+     *     comp_id (int): Composition item id.
+     * Returns:
+     *     (str): JSON list with one record per output module:
+     *         index, name, template, file_name, format, codec, settings
+     */
+    var comp = app.project.itemByID(comp_id);
+    if (!comp){
+        return _prepareError(
+            "Composition with '" + comp_id + "' wasn't found! " +
+            "Recreate publishable instance(s)");
+    }
+
+    var records = [];
+    try{
+        var queue = app.project.renderQueue;
+        for (var i = 1; i <= queue.numItems; ++i){
+            var render_item = queue.item(i);
+            if (!render_item.comp || render_item.comp.id != comp_id){
+                continue;
+            }
+
+            for (var j = 1; j <= render_item.numOutputModules; ++j){
+                var om = render_item.outputModule(j);
+                var settings = om.getSettings(GetSettingsFormat.STRING);
+                records.push(JSON.stringify({
+                    "index": j,
+                    "name": om.name || "",
+                    "template": om.template || "",
+                    "file_name": om.file ? om.file.toString() : "",
+                    "format": _outputSetting(settings, ["Format"]),
+                    "codec": _outputSetting(
+                        settings, ["Codec", "Video Codec"]),
+                    "settings": settings
+                }));
+            }
+        }
+    } catch (error){
+        return _prepareError(
+            "Cannot read Output Module settings: " + error.toString());
+    }
+
+    if (!records.length){
+        return _prepareError(
+            "There is no Render Queue item for '" + comp.name + "'!");
+    }
+
+    return '[' + records.join() + ']';
+}
+
 function getAudioUrlForComp(comp_id){
     /**
      * Searches composition for audio layer
