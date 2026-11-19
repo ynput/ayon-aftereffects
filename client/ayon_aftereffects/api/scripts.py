@@ -57,32 +57,6 @@ class ScriptRunResult:
 class ScriptService:
     """Resolve and execute configured After Effects scripts."""
 
-    @staticmethod
-    def _matches_task(
-        config: dict[str, Any],
-        task_name: str | None,
-        task_type: str | None,
-    ) -> bool:
-        """Return whether a script config applies to the given task.
-
-        Uses core's profile filtering, so an empty list or `*` matches every
-        task, and values are full-match regexes like in other AYON profiles.
-
-        Args:
-            config: Script config from project settings.
-            task_name: Current task name, `None` when no task is set.
-            task_type: Current task type, `None` when no task is set.
-
-        Returns:
-            Whether the script should be offered in this task.
-        """
-        profile = filter_profiles(
-            [config],
-            {"task_types": task_type, "task_names": task_name},
-            logger=log,
-        )
-        return profile is not None
-
     def list_items(self, auto: bool | None = None) -> list[ScriptItem]:
         """Return resolved script items from project settings.
 
@@ -92,7 +66,9 @@ class ScriptService:
 
         Returns:
             Resolved script items in settings order. Scripts whose task
-            filters do not match the current task are left out.
+            filters do not match the current task are left out. Filters go
+            through core's `filter_profiles`, so an empty list or `*`
+            matches every task and values are full-match regexes.
         """
         project_settings = get_current_project_settings()
         scripts_settings = project_settings["aftereffects"]["scripts"]
@@ -104,8 +80,10 @@ class ScriptService:
 
         template_data = get_current_context_template_data()
         task_data = template_data.get("task") or {}
-        task_name = task_data.get("name")
-        task_type = task_data.get("type")
+        task_filter = {
+            "task_types": task_data.get("type"),
+            "task_names": task_data.get("name"),
+        }
 
         output: list[ScriptItem] = []
         for index, config in enumerate(configs):
@@ -113,12 +91,13 @@ class ScriptService:
             if auto is not None and item_auto != auto:
                 continue
 
-            if not self._matches_task(config, task_name, task_type):
+            profile = filter_profiles([config], task_filter, logger=log)
+            if profile is None:
                 log.debug(
                     "Skipping script %s, not configured for task %s (%s).",
                     config["name"],
-                    task_name,
-                    task_type,
+                    task_filter["task_names"],
+                    task_filter["task_types"],
                 )
                 continue
 
