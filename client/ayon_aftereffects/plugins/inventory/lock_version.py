@@ -21,7 +21,7 @@ def _set_version_locked(
 
     for container in containers:
         stub.imprint(
-            container["members"][0],
+            container["layer"].id,
             {"version_locked": locked},
             all_items=all_items,
             items_meta=items_meta,
