@@ -183,8 +183,11 @@ class ScriptService:
 
         result = StringTemplate.format_template(path, template_data)
         if result.solved:
-            resolved = anatomy.path_remapper(result.normalized())
-            return result, resolved
+            resolved_path = result.normalized()
+            # Core returns None for a path that is outside all anatomy roots;
+            # the path is already absolute, so keep it as it is.
+            resolved = anatomy.path_remapper(resolved_path)
+            return result, resolved if resolved is not None else resolved_path
 
         return result, path
 
@@ -280,6 +283,8 @@ class ScriptService:
         Returns:
             Whether the extension is supported.
         """
+        if not path:
+            return False
         return path.lower().endswith(_SUPPORTED_EXTENSIONS)
 
 
