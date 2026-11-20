@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from typing import Any
 
-from ayon_core.lib import Logger, StringTemplate
+from ayon_core.lib import Logger, StringTemplate, filter_profiles
 from ayon_core.pipeline import Anatomy
 from ayon_core.pipeline.context_tools import (
     get_current_context_template_data,
@@ -64,7 +65,10 @@ class ScriptService:
                 returned.
 
         Returns:
-            Resolved script items in settings order.
+            Resolved script items in settings order. Scripts whose task
+            filters do not match the current task are left out. Filters go
+            through core's `filter_profiles`, so an empty list or `*`
+            matches every task and values are full-match regexes.
         """
         project_settings = get_current_project_settings()
         scripts_settings = project_settings["aftereffects"]["scripts"]
@@ -74,10 +78,27 @@ class ScriptService:
             log.debug("No scripts found in project settings.")
             return []
 
+        template_data = get_current_context_template_data()
+        task_data = template_data.get("task") or {}
+        task_filter = {
+            "task_types": task_data.get("type"),
+            "task_names": task_data.get("name"),
+        }
+
         output: list[ScriptItem] = []
         for index, config in enumerate(configs):
             item_auto: bool = config["auto"]
             if auto is not None and item_auto != auto:
+                continue
+
+            profile = filter_profiles([config], task_filter, logger=log)
+            if profile is None:
+                log.debug(
+                    "Skipping script %s, not configured for task %s (%s).",
+                    config["name"],
+                    task_filter["task_names"],
+                    task_filter["task_types"],
+                )
                 continue
 
             raw_path: str = config["path"]
@@ -89,7 +110,9 @@ class ScriptService:
                 resolved_path = raw_path
                 error = "Script path is empty."
             else:
-                template_result, resolved_path = self.resolve_path(raw_path)
+                template_result, resolved_path = self.resolve_path(
+                    raw_path, template_data
+                )
                 if not template_result.solved:
                     missing = ", ".join(sorted(template_result.missing_keys))
                     error = f"Unresolved template variables: {missing}"
@@ -133,17 +156,25 @@ class ScriptService:
             item.path for item in self.list_items(auto=auto) if item.exists
         ]
 
-    def resolve_path(self, path: str) -> tuple:
+    def resolve_path(
+        self,
+        path: str,
+        template_data: dict[str, Any] | None = None,
+    ) -> tuple:
         """Resolve a templated script path against current AYON context.
 
         Args:
             path: Raw configured path.
+            template_data: Current context template data. Queried when not
+                passed.
 
         Returns:
             Tuple of (TemplateResult, resolved path string). When the template
             is not fully solved, the second element is the original raw path.
         """
-        template_data = get_current_context_template_data()
+        if template_data is None:
+            template_data = get_current_context_template_data()
+        template_data = dict(template_data)
         template_data.update(os.environ)
 
         project_name = template_data["project"]["name"]
