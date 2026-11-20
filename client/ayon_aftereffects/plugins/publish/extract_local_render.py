@@ -1,6 +1,7 @@
 import os
 
 from ayon_core.pipeline import publish
+from ayon_core.pipeline.publish import PublishError
 
 from ayon_aftereffects.api import get_stub
 
@@ -19,31 +20,45 @@ class ExtractLocalRender(publish.Extractor):
         self.log.debug("staging_dir::{}".format(staging_dir))
 
         # pull file name collected value from Render Queue Output module
-        if not instance.data["render_queue_file_paths"]:
-            raise ValueError("No file extension set in Render Queue")
+        render_queue_file_paths = (
+            instance.data.get("render_queue_file_paths") or []
+        )
 
-        comp_id = instance.data['comp_id']
+        comp_id = instance.data["comp_id"]
+        comp_name = instance.data.get("comp_name", comp_id)
+
         stub.render(staging_dir, comp_id)
 
+        existing_files = sorted(os.listdir(staging_dir))
+
         representations = []
-        for file_name in instance.data["render_queue_file_paths"]:
-            _, ext = os.path.splitext(os.path.basename(file_name))
-            ext = ext[1:]
-
-            first_file_path = None
-            files = []
-            for found_file_name in os.listdir(staging_dir):
-                if not found_file_name.endswith(ext):
-                    continue
-
-                files.append(found_file_name)
-                if first_file_path is None:
-                    first_file_path = os.path.join(staging_dir,
-                                                   found_file_name)
-
+        for file_name in render_queue_file_paths:
+            _, extension = os.path.splitext(os.path.basename(file_name))
+            ext = extension[1:]
+            files = [
+                found_file_name
+                for found_file_name in existing_files
+                if found_file_name.endswith(ext)
+            ]
             if not files:
-                self.log.info("no files")
-                return
+                found_overview = (
+                    ", ".join(existing_files[:5]) or "no files at all"
+                )
+                if len(existing_files) > 5:
+                    found_overview += ", ..."
+                raise PublishError(
+                    "Render finished, but no '*.{}' output was found in "
+                    "'{}'. Found {} file(s): {}. Expected an output named "
+                    "like '{}'. Check the Output Module of '{}' in the "
+                    "Render Queue.".format(
+                        ext,
+                        staging_dir,
+                        len(existing_files),
+                        found_overview,
+                        os.path.basename(file_name),
+                        comp_name,
+                    )
+                )
 
             # single file cannot be wrapped in array
             resulting_files = files

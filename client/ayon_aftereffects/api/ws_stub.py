@@ -515,6 +515,27 @@ class AfterEffectsServerStub():
         records = self._to_records(self._handle_return(res))
         return records
 
+    def get_output_module_info(self, comp_id):
+        """Read Output Module settings of a composition's queue item.
+
+        Returns one record per output module with `index`, `name`,
+        `template`, `file_name`, `format`, `codec` and the raw AE
+        `settings` dictionary. The `settings` dictionary uses the labels
+        of the Output Module dialog, so it is passed along untouched to
+        discover version and locale specific keys.
+
+        Args:
+            comp_id (int): Composition item id.
+
+        Returns:
+            (list) of (dict): One record per Output Module.
+        """
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.get_output_module_info", comp_id=comp_id
+        )
+
+        return self._handle_return(res) or []
+
     def get_audio_url(self, item_id):
         """ Get audio layer absolute url for comp
 
