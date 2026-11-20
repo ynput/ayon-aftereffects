@@ -183,8 +183,7 @@ class ScriptService:
 
         result = StringTemplate.format_template(path, template_data)
         if result.solved:
-            resolved_path = result.normalized()
-            return result, resolved if resolved is not None else resolved_path
+            return result, result.normalized()
 
         return result, path
 
