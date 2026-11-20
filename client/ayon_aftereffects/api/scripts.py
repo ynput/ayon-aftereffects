@@ -184,9 +184,6 @@ class ScriptService:
         result = StringTemplate.format_template(path, template_data)
         if result.solved:
             resolved_path = result.normalized()
-            # Core returns None for a path that is outside all anatomy roots;
-            # the path is already absolute, so keep it as it is.
-            resolved = anatomy.path_remapper(resolved_path)
             return result, resolved if resolved is not None else resolved_path
 
         return result, path
