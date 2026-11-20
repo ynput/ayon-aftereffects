@@ -15,7 +15,15 @@ class ScriptConfigModel(BaseSettingsModel):
         True,
         description="Auto/Manual toggle.",
     )
-    path: str = SettingsField("", title="Path to script")
+    path: str = SettingsField(
+        "",
+        title="Path to script",
+        description=(
+            "Absolute path, or a template using a root token so the path also"
+            " works on other platforms, e.g."
+            " `{root[work]}/scripts/my_script.jsx`."
+        ),
+    )
     task_types: list[str] = SettingsField(
         default_factory=list,
         title="Task types",

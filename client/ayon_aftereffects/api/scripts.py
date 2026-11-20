@@ -78,7 +78,11 @@ class ScriptService:
             log.debug("No scripts found in project settings.")
             return []
 
-        template_data = get_current_context_template_data()
+        template_data = get_current_context_template_data(project_settings)
+
+        project_name = template_data["project"]["name"]
+        anatomy = Anatomy(project_name)
+
         task_data = template_data.get("task") or {}
         task_filter = {
             "task_types": task_data.get("type"),
@@ -111,7 +115,7 @@ class ScriptService:
                 error = "Script path is empty."
             else:
                 template_result, resolved_path = self.resolve_path(
-                    raw_path, template_data
+                    raw_path, template_data=template_data, anatomy=anatomy
                 )
                 if not template_result.solved:
                     missing = ", ".join(sorted(template_result.missing_keys))
@@ -160,31 +164,35 @@ class ScriptService:
         self,
         path: str,
         template_data: dict[str, Any] | None = None,
+        anatomy: Anatomy | None = None,
     ) -> tuple:
         """Resolve a templated script path against current AYON context.
 
         Args:
-            path: Raw configured path.
-            template_data: Current context template data. Queried when not
-                passed.
+            path (str): Raw configured path.
+            template_data (dict[str, Any]): Current context template data.
+                Use 'get_current_context_template_data' when None.
+            anatomy (Anatomy | None): Project anatomy. Project from
+                'template_data' is used to initialize when None.
 
         Returns:
-            Tuple of (TemplateResult, resolved path string). When the template
-            is not fully solved, the second element is the original raw path.
+            tuple[TemplateResult, str]: When the template is not fully
+                solved, the second element is the original raw path.
+
         """
         if template_data is None:
             template_data = get_current_context_template_data()
         template_data = dict(template_data)
         template_data.update(os.environ)
 
-        project_name = template_data["project"]["name"]
-        anatomy = Anatomy(project_name)
+        if anatomy is None:
+            project_name = template_data["project"]["name"]
+            anatomy = Anatomy(project_name)
         template_data["root"] = anatomy.roots
 
         result = StringTemplate.format_template(path, template_data)
         if result.solved:
-            resolved = anatomy.path_remapper(result.normalized())
-            return result, resolved
+            return result, result.normalized()
 
         return result, path
 
@@ -280,6 +288,8 @@ class ScriptService:
         Returns:
             Whether the extension is supported.
         """
+        if not path:
+            return False
         return path.lower().endswith(_SUPPORTED_EXTENSIONS)
 
 
