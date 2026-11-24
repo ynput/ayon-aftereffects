@@ -778,12 +778,16 @@ function fixOutputModule(comp_id, index, file_name, template){
 
 function getMissingLayerSources(comp_id){
     /**
-     * Report layers of a composition that have no usable source.
+     * Report a composition that cannot render, and why.
      *
      * Footage removed from the project leaves the layers behind: After
      * Effects renders them black and no footage item is left for
      * ValidateFootageItems to check. Text, shape, adjustment and null
      * layers legitimately have no source and are skipped.
+     *
+     * A composition with no layer at all - the artist deleted the only
+     * layer, or only cameras and lights are left - renders black too, so
+     * it is reported with the 'empty_comp' reason.
      *
      * Only the layers of `comp_id` are inspected, not the layers of the
      * compositions nested inside it.
@@ -792,7 +796,7 @@ function getMissingLayerSources(comp_id){
      *     comp_id (int): Composition item id.
      * Returns:
      *     (str): JSON list of records with layer and reason
-     *         (missing_source, footage_missing or file_missing).
+     *         (missing_source, footage_missing, file_missing or empty_comp).
      */
     var comp = app.project.itemByID(comp_id);
     if (!comp){
@@ -804,12 +808,14 @@ function getMissingLayerSources(comp_id){
     }
 
     var problems = [];
+    var av_layers = 0;
     for (var i = 1; i <= comp.numLayers; ++i){
         var layer = comp.layer(i);
         try{
             if (!(layer instanceof AVLayer)){
                 continue;
             }
+            ++av_layers;
             if (layer instanceof TextLayer || layer instanceof ShapeLayer){
                 continue;
             }
@@ -844,6 +850,10 @@ function getMissingLayerSources(comp_id){
         } catch (error){
             // A layer that cannot be inspected is not a missing source.
         }
+    }
+
+    if (!av_layers){
+        problems.push({"layer": "", "reason": "empty_comp"});
     }
 
     return _prepareSingleValue(problems);

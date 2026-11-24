@@ -107,8 +107,9 @@ class ValidateFootageItems(pyblish.api.InstancePlugin):
                 {
                     "key": "missing_source",
                     "message": (
-                        "Composition '{}' has layers without a usable source: "
-                        "{}".format(comp_name, summary)
+                        "Composition '{}' cannot render: {}".format(
+                            comp_name, summary
+                        )
                     ),
                     "data": {
                         "comp_name": comp_name,

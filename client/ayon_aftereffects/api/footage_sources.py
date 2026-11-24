@@ -23,6 +23,9 @@ REASONS = {
     "file_missing": "source file is missing",
 }
 
+#: Reason of a composition that has no layer to render.
+EMPTY_COMP = "empty_comp"
+
 #: Layer name used when the host reports none.
 _UNNAMED_LAYER = "<unnamed layer>"
 
@@ -44,9 +47,12 @@ def summarize_missing_sources(records: Iterable[Any] | None) -> str:
     seen = set()
     parts = []
     for record in records or []:
+        code = str(_get(record, "reason", "") or "").strip()
+        if code == EMPTY_COMP:
+            return "no layers in the composition, the render would be black"
+
         layer = str(_get(record, "layer", "") or "").strip()
         layer = layer or _UNNAMED_LAYER
-        code = str(_get(record, "reason", "") or "").strip()
         reason = REASONS.get(code, code or "unknown reason")
 
         if (layer, reason) in seen:

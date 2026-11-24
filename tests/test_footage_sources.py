@@ -89,6 +89,22 @@ def test_summary_is_truncated():
     assert result.count("layer has no source") == 5, result
 
 
+def test_empty_composition():
+    # The artist deleted the only layer, so nothing is rendered at all.
+    assert summary([{"layer": "", "reason": "empty_comp"}]) == (
+        "no layers in the composition, the render would be black"
+    )
+    assert (
+        summary(
+            [
+                {"layer": "", "reason": "empty_comp"},
+                {"layer": "logo.png", "reason": "missing_source"},
+            ]
+        )
+        == "no layers in the composition, the render would be black"
+    )
+
+
 def main():
     """Run every test function and report failures."""
     failed = 0
