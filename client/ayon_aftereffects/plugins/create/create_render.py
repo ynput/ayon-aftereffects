@@ -7,9 +7,11 @@ from ayon_core.pipeline import (
     CreatorError
 )
 from ayon_core.lib import prepare_template_data
+from ayon_core.pipeline.context_tools import get_current_project_settings
 from ayon_core.pipeline.create import PRODUCT_NAME_ALLOWED_SYMBOLS
 
 from ayon_aftereffects import api
+from ayon_aftereffects.api import output_module
 from ayon_aftereffects.api.pipeline import cache_and_get_instances
 from ayon_aftereffects.api.lib import set_settings
 
@@ -138,7 +140,7 @@ class RenderCreator(Creator):
             self._ensure_comp_in_render_queue(
                 stub=stub,
                 comp_id=comp.id,
-                comp_name=comp_product_name
+                product_name=comp_product_name
             )
 
     def get_pre_create_attr_defs(self):
@@ -197,14 +199,15 @@ class RenderCreator(Creator):
         self._add_instance_to_context(new_instance)
 
     def _ensure_comp_in_render_queue(
-        self, stub: object, comp_id: int, comp_name: str
+        self, stub: object, comp_id: int, product_name: str
     ) -> None:
         """Ensure composition is present in After Effects render queue.
 
         Args:
             stub (object): Connected After Effects server stub.
             comp_id (int): Composition item id in After Effects.
-            comp_name (str): Composition/product name for readable errors.
+            product_name (str): Product name, used for readable errors and
+                for the output file name.
 
         Raises:
             CreatorError: When composition cannot be queued.
@@ -213,13 +216,100 @@ class RenderCreator(Creator):
             queued = stub.add_comp_to_render_queue(comp_id)
         except ValueError as exc:
             raise CreatorError(
-                f"Failed to add '{comp_name}' to render queue: {exc}"
+                f"Failed to add '{product_name}' to render queue: {exc}"
             ) from exc
 
         if not queued:
             raise CreatorError(
-                f"Failed to add '{comp_name}' to render queue."
+                f"Failed to add '{product_name}' to render queue."
             )
+
+        self._apply_output_module_name(stub, comp_id, product_name)
+
+    def _apply_output_module_name(
+        self, stub: object, comp_id: int, product_name: str
+    ) -> None:
+        """Name the Output Module from the matching preset.
+
+        AYON queues the composition with the bare product name, so a
+        sequence format becomes `name.exr00835` once After Effects appends
+        the frame number after the extension - a render that cannot be
+        published. The presets already describe the expected name, so the
+        instance is created correct instead of failing later.
+
+        Never raises: a missing preset, an older AYON extension or a host
+        error must not stop the instance from being created.
+
+        Args:
+            stub (object): Connected After Effects server stub.
+            comp_id (int): Composition item id in After Effects.
+            product_name (str): Product name of the instance.
+        """
+        presets = self._output_presets()
+        if not presets:
+            return
+
+        try:
+            modules = stub.get_output_module_info(comp_id)
+        except Exception:
+            self.log.warning(
+                "Cannot read the Output Module of '%s'. Is the AYON "
+                "extension up to date? The Render Queue keeps the name "
+                "'%s'.",
+                product_name,
+                product_name,
+                exc_info=True,
+            )
+            return
+
+        for module in modules or []:
+            name = output_module.creation_name(product_name, module, presets)
+            if not name:
+                continue
+
+            current = output_module.parse_output_name(module.get("file_name"))
+            if name == current.name:
+                continue
+
+            try:
+                stub.fix_output_module(comp_id, module.get("index", 1), name)
+            except Exception:
+                self.log.warning(
+                    "Cannot name Output Module %s of '%s' as '%s'.",
+                    module.get("index", 1),
+                    product_name,
+                    name,
+                    exc_info=True,
+                )
+                continue
+
+            self.log.info(
+                "Output Module %s of '%s' writes '%s'.",
+                module.get("index", 1),
+                product_name,
+                name,
+            )
+
+    @staticmethod
+    def _output_presets():
+        """Return the Output Module presets from project settings.
+
+        The presets are configured on the Validate Output Module plugin and
+        describe the allowed format, extension and file name per Output
+        Module, so they are used for naming as well.
+
+        Returns:
+            list[dict]: Preset settings, empty when not configured.
+        """
+        try:
+            project_settings = get_current_project_settings()
+        except Exception:
+            return []
+
+        after_effects = (project_settings or {}).get("aftereffects") or {}
+        publish_settings = after_effects.get("publish") or {}
+        plugin_settings = publish_settings.get("ValidateOutputModule") or {}
+        return plugin_settings.get("presets") or []
 
     def collect_instances(self):
         instances_by_comp_id = {}
