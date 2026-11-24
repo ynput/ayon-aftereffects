@@ -1226,24 +1226,26 @@ function addItemInstead(placeholder_item_id, item_id){
     }
 
     app.beginUndoGroup('Add loaded items');
-    for (i = 1; i <= app.project.items.length; ++i){
-        var comp = app.project.items[i];
+    // Separate counters: `var` is function-scoped in ExtendScript, so one
+    // shared `i` made the comp loop skip or revisit comps.
+    for (var item_idx = 1; item_idx <= app.project.items.length; ++item_idx){
+        var comp = app.project.items[item_idx];
         if (!(comp instanceof CompItem)){
             continue
         }
 
-        var i = 1;
-        while (i <= comp.numLayers) {
-            var layer = comp.layer(i);
+        var layer_idx = 1;
+        while (layer_idx <= comp.numLayers) {
+            var layer = comp.layer(layer_idx);
             var layer_source = layer.source;
             if (layer_source && layer_source.id == placeholder_item_id){
                 var new_layer = comp.layers.add(item);
                 new_layer.moveAfter(layer);
                 // copy all(?) properties to new layer
                 layer.property("ADBE Transform Group").copyToComp(new_layer);
-                i = i + 1;
+                layer_idx = layer_idx + 1;
             }
-            i = i + 1;
+            layer_idx = layer_idx + 1;
         }
     }
     app.endUndoGroup();
