@@ -124,3 +124,44 @@ $(function () {
         });
     });
 });
+
+/**
+ * Make the button groups collapsible and remember each one's state.
+ *
+ * Groups are <details data-group="..."> elements, so folding itself is
+ * native. This only restores the artist's last choice per group from
+ * localStorage. Storage can be unavailable or full; the panel then
+ * still folds, it just forgets on reload.
+ */
+$(function () {
+    var STORAGE_PREFIX = "ayon.panel.group.";
+
+    $("#content details.group[data-group]").each(function () {
+        var details = this;
+        var storageKey = STORAGE_PREFIX + $(details).data("group");
+
+        try {
+            if (window.localStorage.getItem(storageKey) === "closed") {
+                details.open = false;
+            }
+        } catch (error) {
+            // unreadable storage, keep the default open state
+        }
+
+        details.addEventListener("toggle", function () {
+            try {
+                window.localStorage.setItem(
+                    storageKey, details.open ? "open" : "closed"
+                );
+            } catch (error) {
+                // not saved, the fold still works for this session
+            }
+        });
+    });
+
+    // no :focus-visible in Chrome 61, so keep mouse clicks from
+    // leaving the keyboard focus ring on the header
+    $("#content details.group > summary").on("mousedown", function (event) {
+        event.preventDefault();
+    });
+});

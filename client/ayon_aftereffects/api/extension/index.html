@@ -64,6 +64,9 @@
             <path transform="scale(1,-1)"
                 d="M320 240 80 480 320 720 377 663 193 479 376 296ZM640 240 583 297 767 481 584 664 640 720 880 480Z" />
         </symbol>
+        <symbol id="i-chevron" viewBox="0 -960 960 960">
+            <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
+        </symbol>
         <symbol id="i-run" viewBox="0 -960 960 960">
             <path transform="scale(1,-1)" d="M320 200V760L760 480ZM400 480ZM400 346 610 480 400 614Z" />
         </symbol>
@@ -75,8 +78,12 @@
 
     <div id="content">
 
-        <section class="group">
-            <h2 class="group-title">Pipeline</h2>
+        <details class="group" data-group="pipeline" open>
+            <summary class="group-title">
+                <svg class="group-chevron">
+                    <use href="#i-chevron" />
+                </svg><h2>Pipeline</h2>
+            </summary>
             <div class="group-items">
                 <button type="button" class="hostFontSize" id="workfiles-button" data-route="workfiles_route"
                     data-busy="Opening...">
@@ -104,10 +111,14 @@
                         <use href="#i-manage" />
                     </svg><span class="btn-label">Manage...</span></button>
             </div>
-        </section>
+        </details>
 
-        <section class="group">
-            <h2 class="group-title">Scene Settings</h2>
+        <details class="group" data-group="scene-settings" open>
+            <summary class="group-title">
+                <svg class="group-chevron">
+                    <use href="#i-chevron" />
+                </svg><h2>Scene Settings</h2>
+            </summary>
             <div class="group-items">
                 <button type="button" class="hostFontSize" id="setresolution-button" data-route="setresolution_route"
                     data-busy="Applying...">
@@ -125,10 +136,14 @@
                         <use href="#i-apply-all" />
                     </svg><span class="btn-label">Apply All Settings</span></button>
             </div>
-        </section>
+        </details>
 
-        <section class="group">
-            <h2 class="group-title">Templates</h2>
+        <details class="group" data-group="templates" open>
+            <summary class="group-title">
+                <svg class="group-chevron">
+                    <use href="#i-chevron" />
+                </svg><h2>Templates</h2>
+            </summary>
             <div class="group-items">
                 <button type="button" class="hostFontSize" id="create-placeholder-button"
                     data-route="create_placeholder_route" data-busy="Creating...">
@@ -146,10 +161,14 @@
                         <use href="#i-build" />
                     </svg><span class="btn-label">Build Workfile from template</span></button>
             </div>
-        </section>
+        </details>
 
-        <section class="group">
-            <h2 class="group-title">Scripts</h2>
+        <details class="group" data-group="scripts" open>
+            <summary class="group-title">
+                <svg class="group-chevron">
+                    <use href="#i-chevron" />
+                </svg><h2>Scripts</h2>
+            </summary>
             <div class="group-items">
                 <button type="button" class="hostFontSize" id="script-editor-button" data-route="script_editor_route"
                     data-busy="Opening...">
@@ -167,7 +186,7 @@
                         <use href="#i-experimental" />
                     </svg><span class="btn-label">Experimental Tools...</span></button>
             </div>
-        </section>
+        </details>
 
     </div>
 

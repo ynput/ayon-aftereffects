@@ -88,7 +88,10 @@ body {
     margin-bottom: 0;
 }
 
+/* The summary is the clickable header that folds its group */
 .group-title {
+    display: flex;
+    align-items: center;
     margin: 0 0 6px 0;
     padding-bottom: 4px;
     border-bottom: 1px solid var(--ayon-border);
@@ -96,6 +99,43 @@ body {
     font-size: 0.8em;
     font-weight: 500;
     letter-spacing: 0.04em;
+    cursor: pointer;
+    user-select: none;
+    outline: none;
+}
+
+.group-title:hover {
+    color: var(--ayon-font);
+}
+
+/* Chrome 61 ignores list-style:none on summary, hence the pseudo */
+.group-title::-webkit-details-marker {
+    display: none;
+}
+
+.group-title:focus {
+    outline: 2px solid var(--ayon-primary);
+    outline-offset: 1px;
+    border-radius: var(--ayon-radius);
+}
+
+.group-title h2 {
+    margin: 0;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+.group-chevron {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+    fill: currentColor;
+    transition: transform 0.1s ease;
+}
+
+.group:not([open]) > .group-title .group-chevron {
+    transform: rotate(-90deg);
 }
 
 /*
