@@ -536,6 +536,55 @@ class AfterEffectsServerStub():
 
         return self._handle_return(res) or []
 
+    def fix_output_module(self, comp_id, index, file_name, template=""):
+        """Write the output file name of an Output Module.
+
+        Used by the Repair action of `ValidateOutputModule`. The output
+        folder is kept, only the file name is replaced, because AYON
+        rewrites the folder for every render anyway.
+
+        Args:
+            comp_id (int): Composition item id.
+            index (int): Output Module index, starting at 1.
+            file_name (str): New output file name without a folder.
+            template (str): Output Module template to apply first, so the
+                format and codec match the preset. Empty skips it.
+
+        Returns:
+            (dict): Written record with `index`, `file_name`,
+                `template_applied` and `error` when the template failed.
+        """
+        res = self.websocketserver.call_on_client(
+            self,
+            "AfterEffects.fix_output_module",
+            comp_id=comp_id,
+            index=index,
+            file_name=file_name,
+            template=template,
+        )
+
+        return self._handle_return(res) or {}
+
+    def get_missing_layer_sources(self, comp_id):
+        """Return layers of a composition whose source cannot render.
+
+        Footage that was removed from the project has no footage item
+        left to check, so `ValidateFootageItems` cannot see it. After
+        Effects still keeps the layers and renders them black.
+
+        Args:
+            comp_id (int): Composition item id.
+
+        Returns:
+            (list) of (dict): One record per unusable layer with `layer`
+                and `reason`.
+        """
+        res = self.websocketserver.call_on_client(
+            self, "AfterEffects.get_missing_layer_sources", comp_id=comp_id
+        )
+
+        return self._handle_return(res) or []
+
     def get_audio_url(self, item_id):
         """ Get audio layer absolute url for comp
 

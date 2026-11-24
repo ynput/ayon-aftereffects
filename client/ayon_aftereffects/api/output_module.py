@@ -26,6 +26,10 @@ PRODUCT_NAME_TOKEN = "{product_name}"
 #: A printf pattern such as "comp_%05d.exr" is not a valid AE output name.
 _SEQUENCE_TOKEN_RE = re.compile(r"\[(?P<hashes>#+)\]")
 
+#: Digits AE appends after the extension when the name has no frame token,
+#: e.g. "comp.exr00835".
+_FRAME_SUFFIX_RE = re.compile(r"\d+$")
+
 #: Marker the frame token is replaced with before comparing names.
 _FRAME_MARKER = "{frame}"
 
@@ -51,6 +55,27 @@ class OutputProblem:
     key: str
     message: str
     fields: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ModuleRepair:
+    """Output Module write planned by the Repair action."""
+
+    index: int
+    file_name: str
+    template: str
+
+
+@dataclass(frozen=True)
+class RepairPlan:
+    """Writes the Repair action can perform, and what it must leave alone."""
+
+    writes: tuple[ModuleRepair, ...] = ()
+    notes: tuple[str, ...] = ()
+
+    def __bool__(self) -> bool:
+        """Whether the plan has anything to write."""
+        return bool(self.writes)
 
 
 def parse_output_name(value: Any) -> OutputName:
@@ -140,7 +165,7 @@ def match_preset(
     }
 
     for preset in presets:
-        if preset["template"] and preset["template"] in module_names:
+        if preset["template"] and _text(preset["template"]) in module_names:
             return preset
 
     for preset in presets:
@@ -204,6 +229,129 @@ def validate_output_modules(
     return problems
 
 
+def creation_name(
+    product_name: str,
+    module: Any,
+    presets: Iterable[Any],
+) -> str | None:
+    """Return the output file name an Output Module should be created with.
+
+    AYON writes the bare composition name into the Render Queue, so a
+    sequence format ends up as `name.exr00835`: After Effects appends the
+    frame number after the extension and the render cannot be published.
+    Naming from the preset keeps the file name valid from the start, so the
+    validation and the extractor only have to deal with renders that were
+    set up by hand.
+
+    Only the name is returned: format and codec stay as they are, since
+    creating an instance must not change the artist's Output Module.
+
+    Args:
+        product_name: Product name of the instance.
+        module: Output Module record from the host.
+        presets: Allowed presets from project settings.
+
+    Returns:
+        File name to write, or `None` when no preset matches and the
+        Render Queue should be left alone.
+    """
+    normalized_presets = [
+        _normalize_preset(preset) for preset in presets or []
+    ]
+    if not normalized_presets:
+        return None
+
+    actual = parse_output_name(_get(module, "file_name", "") or "")
+    if not actual.name:
+        return None
+
+    preset = match_preset(module, normalized_presets, actual)
+    if preset is None:
+        return None
+
+    return _name_from_pattern(
+        product_name, preset, _real_extension(preset, actual)
+    )
+
+
+def build_repair(
+    product_name: str,
+    modules: Iterable[Any],
+    presets: Iterable[Any],
+) -> RepairPlan:
+    """Plan the Output Module writes needed to fix the reported problems.
+
+    Only modules that fail validation are written, so Repair never touches
+    an Output Module the artist already set up correctly. Format and codec
+    can only be written through an Output Module template: AE's own
+    settings keys differ between versions and locales, so a preset without
+    `template` leaves them alone and the note says so.
+
+    Args:
+        product_name: Product name of the instance.
+        modules: Output Module records from the host.
+        presets: Allowed presets from project settings.
+
+    Returns:
+        Writes to perform and notes for whatever Repair cannot do.
+    """
+    normalized_presets = [
+        _normalize_preset(preset) for preset in presets or []
+    ]
+    modules = list(modules or [])
+    if not modules:
+        return RepairPlan()
+
+    if not normalized_presets:
+        return RepairPlan(
+            notes=(
+                "No output presets are configured, so the Output Module "
+                "cannot be repaired automatically.",
+            )
+        )
+
+    allowed = describe_presets(normalized_presets)
+    writes: list[ModuleRepair] = []
+    notes: list[str] = []
+    for module in modules:
+        index = _get(module, "index", 1) or 1
+        problems = _validate_module(
+            product_name, module, normalized_presets, allowed
+        )
+        if not problems:
+            continue
+
+        actual = parse_output_name(_get(module, "file_name", "") or "")
+        preset = match_preset(module, normalized_presets, actual)
+        if preset is None:
+            preset = normalized_presets[0]
+
+        label = (
+            preset["label"]
+            or preset["format"]
+            or preset["template"]
+            or "preset"
+        )
+        needs_template = any(
+            problem.key in ("not_allowed", "format", "codec")
+            for problem in problems
+        )
+        template = preset["template"] if needs_template else ""
+        if needs_template and not template:
+            notes.append(
+                "Output Module {}: format or codec does not match '{}' and "
+                "the preset has no Output Module template, so only the file "
+                "name can be repaired.".format(index, label)
+            )
+
+        write, note = _plan_name(product_name, index, preset, actual, template)
+        writes.append(write)
+        if note:
+            notes.append(note)
+
+    return RepairPlan(writes=tuple(writes), notes=tuple(notes))
+
+
 def _validate_module(
     product_name: str,
     module: Any,
@@ -265,7 +413,26 @@ def _validate_module(
     problems: list[OutputProblem] = []
 
     extensions = preset["extensions"]
-    if extensions and actual.ext not in extensions:
+    real_extension = _real_extension(preset, actual)
+    appended = bool(real_extension) and real_extension != actual.ext
+    if appended:
+        # AE puts the frame number after the extension when the name has no
+        # token, so report that instead of calling '.exr00835' a bad
+        # extension - the missing token is what the artist can fix.
+        problems.append(
+            OutputProblem(
+                key="appended",
+                message=(
+                    "Output Module {} wrote '{}': After Effects put the "
+                    "frame number after the extension because the file "
+                    "name has no [#####] frame token.".format(
+                        index, actual.name
+                    )
+                ),
+                fields={"index": index, "actual": actual.name},
+            )
+        )
+    elif extensions and actual.ext not in extensions:
         problems.append(
             OutputProblem(
                 key="extension",
@@ -292,18 +459,19 @@ def _validate_module(
     if preset["sequence"]:
         if actual.padding is None:
             frame_problem = True
-            problems.append(
-                OutputProblem(
-                    key="sequence",
-                    message=(
-                        "Output Module {} is a frame sequence, but '{}' "
-                        "has no [#####] frame token.".format(
-                            index, actual.name
-                        )
-                    ),
-                    fields={"index": index, "actual": actual.name},
+            if not appended:
+                problems.append(
+                    OutputProblem(
+                        key="sequence",
+                        message=(
+                            "Output Module {} is a frame sequence, but '{}' "
+                            "has no [#####] frame token.".format(
+                                index, actual.name
+                            )
+                        ),
+                        fields={"index": index, "actual": actual.name},
+                    )
                 )
-            )
         elif actual.padding != preset["padding"]:
             frame_problem = True
             problems.append(
@@ -404,6 +572,141 @@ def _validate_module(
     return problems
 
 
+def _plan_name(
+    product_name: str,
+    index: int,
+    preset: Mapping[str, Any],
+    actual: OutputName,
+    template: str,
+) -> tuple[ModuleRepair, str]:
+    """Build the file name to write for one Output Module.
+
+    The extension follows the preset when a template is applied, because
+    the template's format decides what AE actually writes. Without a
+    template the current extension is kept: renaming '.mov' to '.mp4'
+    would only move the failure from validation to extraction.
+
+    Args:
+        product_name: Product name of the instance.
+        index: Output Module index.
+        preset: Normalized preset to write towards.
+        actual: Parsed current file name.
+        template: Template to apply, empty when none.
+
+    Returns:
+        The planned write and a note about what it cannot fix.
+    """
+    pattern = preset["name_pattern"] or PRODUCT_NAME_TOKEN
+    display = str(pattern).replace(PRODUCT_NAME_TOKEN, product_name or "")
+    stem, pattern_extension = _split_name(display)
+
+    note = ""
+    if template:
+        if preset["extensions"]:
+            extension = preset["extensions"][0]
+        else:
+            extension = pattern_extension
+    else:
+        # The format decides what AE writes, so only a template may move
+        # the extension. Renaming '.mov' to '.mp4' would just move the
+        # failure from validation to extraction.
+        extension = _real_extension(preset, actual) or pattern_extension
+        if preset["extensions"] and extension not in preset["extensions"]:
+            current = "." + extension if extension else "no extension"
+            note = (
+                "Output Module {} is left with {}, which the preset does "
+                "not list ({}). Fix the format, or set a template on the "
+                "preset, so Repair can write the extension.".format(
+                    index,
+                    current,
+                    ", ".join("." + ext for ext in preset["extensions"]),
+                )
+            )
+
+    file_name = _name_from_pattern(product_name, preset, extension)
+    write = ModuleRepair(index=index, file_name=file_name, template=template)
+    return write, note
+
+
+def _name_from_pattern(
+    product_name: str,
+    preset: Mapping[str, Any],
+    extension: str,
+) -> str:
+    """Build a file name from the preset's pattern.
+
+    Args:
+        product_name: Product name of the instance.
+        preset: Normalized preset.
+        extension: Extension to append, without the dot.
+
+    Returns:
+        File name with the product name and, for sequence presets, the
+        frame token with the configured padding.
+    """
+    pattern = preset["name_pattern"] or PRODUCT_NAME_TOKEN
+    display = str(pattern).replace(PRODUCT_NAME_TOKEN, product_name or "")
+    stem, pattern_extension = _split_name(display)
+
+    if preset["sequence"]:
+        hashes = "#" * preset["padding"]
+        if _SEQUENCE_TOKEN_RE.search(stem):
+            stem = _SEQUENCE_TOKEN_RE.sub("[" + hashes + "]", stem)
+        else:
+            stem = "{}_[{}]".format(stem, hashes)
+
+    extension = extension or pattern_extension
+    return stem + ("." + extension if extension else "")
+
+
+def _real_extension(
+    preset: Mapping[str, Any],
+    actual: OutputName,
+) -> str:
+    """Return the extension without the frame number AE appended to it.
+
+    A file name without a `[#####]` token gets the frame number after the
+    extension, `comp.exr00835`, so the parsed extension carries it. Only
+    strip it when the preset names the extension: a plain '.mp4' must never
+    be shortened to '.mp'.
+
+    Args:
+        preset: Normalized preset.
+        actual: Parsed current file name.
+
+    Returns:
+        Extension to write, without the dot.
+    """
+    extension = actual.ext
+    if not extension or not preset["extensions"]:
+        return extension
+
+    if extension in preset["extensions"]:
+        return extension
+
+    stripped = _FRAME_SUFFIX_RE.sub("", extension)
+    if stripped and stripped in preset["extensions"]:
+        return stripped
+
+    return extension
+
+
+def _split_name(text: Any) -> tuple[str, str]:
+    """Split a file name into stem and extension, keeping the case.
+
+    Args:
+        text: File name.
+
+    Returns:
+        Stem and extension without the dot, empty when there is none.
+    """
+    name = str(text or "").strip()
+    stem, separator, extension = name.rpartition(".")
+    if not separator or not extension.isalnum():
+        return name, ""
+    return stem, extension
+
+
 def _normalize_preset(preset: Any) -> dict[str, Any]:
     """Return a preset as a dictionary with defaults filled in.
 
@@ -427,7 +730,9 @@ def _normalize_preset(preset: Any) -> dict[str, Any]:
 
     return {
         "label": str(_get(preset, "label", "") or "").strip(),
-        "template": _text(_get(preset, "template", "")),
+        # Kept as written: `applyTemplate()` of the Repair action needs the
+        # name in its original case. Matching folds the case itself.
+        "template": str(_get(preset, "template", "") or "").strip(),
         "format": _text(_get(preset, "format", "")),
         "codec": _text(_get(preset, "codec", "")),
         "name_pattern": str(_get(preset, "name_pattern", "") or ""),

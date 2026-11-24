@@ -709,6 +709,146 @@ function getOutputModuleInfo(comp_id){
     return '[' + records.join() + ']';
 }
 
+function fixOutputModule(comp_id, index, file_name, template){
+    /**
+     * Repair the Output Module of the Render Queue item of `comp_id`.
+     *
+     * The output folder is kept and only the file name is replaced, since
+     * AYON rewrites the folder for every render anyway. `setSettings()` is
+     * used instead of assigning `om.file` so After Effects keeps appending
+     * the extension of the applied format.
+     *
+     * A template is applied first and only when asked for: it is what
+     * changes format and codec, and a failed template must not stop the
+     * file name from being written.
+     *
+     * Args:
+     *     comp_id (int): Composition item id.
+     *     index (int): Output Module index, starting at 1.
+     *     file_name (str): New output file name without folders.
+     *     template (str): Output Module template to apply, empty to skip.
+     * Returns:
+     *     (str): JSON record with index, file_name, template_applied and
+     *         error when the template could not be applied.
+     */
+    var render_item = _getRenderQueueItem(comp_id);
+    if (!render_item){
+        return _prepareError(
+            "There is no item in Render Queue for '" + comp_id + "'!");
+    }
+    if (index < 1 || index > render_item.numOutputModules){
+        return _prepareError(
+            "Output Module " + index + " does not exist for '" +
+            render_item.comp.name + "'!");
+    }
+
+    var om = render_item.outputModule(index);
+    var template_applied = false;
+    var template_error = "";
+    if (template){
+        try{
+            om.applyTemplate(template);
+            template_applied = true;
+        } catch (error){
+            template_error = "Output Module template '" + template +
+                "' could not be applied: " + error.toString();
+        }
+    }
+
+    var folder = "";
+    try{
+        folder = om.file ? om.file.path : "";
+    } catch (error){
+        folder = "";
+    }
+
+    var file_info = {"File Name": file_name};
+    if (folder){
+        file_info["Base Path"] = folder;
+    }
+    om.setSettings({"Output File Info": file_info});
+
+    return JSON.stringify({
+        "index": index,
+        "file_name": om.file ? om.file.toString() : "",
+        "template_applied": template_applied,
+        "error": template_error
+    });
+}
+
+function getMissingLayerSources(comp_id){
+    /**
+     * Report layers of a composition that have no usable source.
+     *
+     * Footage removed from the project leaves the layers behind: After
+     * Effects renders them black and no footage item is left for
+     * ValidateFootageItems to check. Text, shape, adjustment and null
+     * layers legitimately have no source and are skipped.
+     *
+     * Only the layers of `comp_id` are inspected, not the layers of the
+     * compositions nested inside it.
+     *
+     * Args:
+     *     comp_id (int): Composition item id.
+     * Returns:
+     *     (str): JSON list of records with layer and reason
+     *         (missing_source, footage_missing or file_missing).
+     */
+    var comp = app.project.itemByID(comp_id);
+    if (!comp){
+        return _prepareError(
+            "Composition with '" + comp_id + "' wasn't found!");
+    }
+    if (!(comp instanceof CompItem)){
+        return _prepareSingleValue([]);
+    }
+
+    var problems = [];
+    for (var i = 1; i <= comp.numLayers; ++i){
+        var layer = comp.layer(i);
+        try{
+            if (!(layer instanceof AVLayer)){
+                continue;
+            }
+            if (layer instanceof TextLayer || layer instanceof ShapeLayer){
+                continue;
+            }
+            if (layer.adjustmentLayer || layer.nullLayer){
+                continue;
+            }
+
+            var source = layer.source;
+            if (!source){
+                problems.push({
+                    "layer": layer.name,
+                    "reason": "missing_source"
+                });
+                continue;
+            }
+            if (source.footageMissing){
+                problems.push({
+                    "layer": layer.name,
+                    "reason": "footage_missing"
+                });
+                continue;
+            }
+
+            var main_source = source.mainSource;
+            if (main_source && main_source.file &&
+                    !main_source.file.exists){
+                problems.push({
+                    "layer": layer.name,
+                    "reason": "file_missing"
+                });
+            }
+        } catch (error){
+            // A layer that cannot be inspected is not a missing source.
+        }
+    }
+
+    return _prepareSingleValue(problems);
+}
+
 function getAudioUrlForComp(comp_id){
     /**
      * Searches composition for audio layer

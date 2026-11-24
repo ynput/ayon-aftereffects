@@ -17,9 +17,13 @@ from ayon_core.pipeline import (
     OptionalPyblishPluginMixin,
     PublishXmlValidationError,
 )
+from ayon_core.pipeline.publish import RepairAction
 
 from ayon_aftereffects.api import get_stub
-from ayon_aftereffects.api.output_module import validate_output_modules
+from ayon_aftereffects.api.output_module import (
+    build_repair,
+    validate_output_modules,
+)
 from ayon_aftereffects.api.ws_stub import ConnectionNotEstablishedYet
 
 #: Maps a problem key to the matching id in `validate_output_module.xml`.
@@ -29,6 +33,7 @@ ERROR_KEYS = {
     "name": "name",
     "extension": "extension",
     "sequence": "sequence",
+    "appended": "sequence",
     "padding": "sequence",
     "single_file": "sequence",
     "not_allowed": "not_allowed",
@@ -56,6 +61,7 @@ class ValidateOutputModule(
     families = ["render"]
     hosts = ["aftereffects"]
     settings_category = "aftereffects"
+    actions = [RepairAction]
 
     enabled = False
     optional = True
@@ -101,6 +107,73 @@ class ValidateOutputModule(
                 "index": first.fields.get("index", 1),
             },
         )
+
+    def repair(self, instance):
+        """Write the Output Module settings the instance should have.
+
+        A plain method, not a classmethod: `RepairAction` calls it on the
+        plugin object, so `self.presets` is the project configured list
+        rather than the empty class default.
+
+        Args:
+            instance (pyblish.api.Instance): Publish instance.
+        """
+        modules = self._collect_modules(instance)
+        plan = build_repair(
+            instance.data.get("productName", ""),
+            modules,
+            self.presets,
+        )
+        for note in plan.notes:
+            self.log.warning(note)
+
+        if not plan.writes:
+            self.log.info("Nothing to repair automatically.")
+            return
+
+        comp_id = instance.data.get("comp_id")
+        try:
+            stub = get_stub()
+        except ConnectionNotEstablishedYet:
+            self.log.warning(
+                "Not connected to After Effects, cannot repair the Output "
+                "Module."
+            )
+            return
+
+        for write in plan.writes:
+            try:
+                result = stub.fix_output_module(
+                    comp_id,
+                    write.index,
+                    write.file_name,
+                    template=write.template,
+                )
+            except Exception:
+                self.log.warning(
+                    "Cannot write Output Module %s. Is the AYON extension "
+                    "up to date?",
+                    write.index,
+                    exc_info=True,
+                )
+                continue
+
+            if result.get("error"):
+                self.log.warning(result["error"])
+                continue
+
+            written = result.get("file_name") or write.file_name
+            if result.get("template_applied"):
+                self.log.info(
+                    "Output Module %s set to %s with template '%s'.",
+                    write.index,
+                    written,
+                    write.template,
+                )
+            else:
+                self.log.info(
+                    "Output Module %s set to %s.", write.index, written
+                )
 
     def _collect_modules(self, instance):
         """Return Output Module records for the instance composition.

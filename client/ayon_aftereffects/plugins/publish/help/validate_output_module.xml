@@ -12,7 +12,11 @@ Output Module.
 
 ### How to repair?
 
-Open `Window > Render Queue`, select the item of the composition, open
+Click **Repair** to write the output file name of the preset, then
+**refresh** the publisher (circular arrow button).
+
+If the problem persists, or there is no Output Module at all, do it by hand:
+open `Window > Render Queue`, select the item of the composition, open
 `Output Module` and pick one of the allowed presets: {allowed}
 
     The output file name is built from the product name '{product_name}'.
@@ -26,6 +30,10 @@ compared with the presets configured in
 
 Frame sequences need AE's `[#####]` token, not a printf pattern such as
 `%05d`.
+
+Repair only writes the Output Modules that fail, and only their file name:
+format and codec can be changed only through an Output Module template, so
+a preset without one leaves them to you.
 </detail>
 </error>
 <error id="name">
@@ -40,7 +48,10 @@ is '{product_name}'.
 
 ### How to repair?
 
-Rename the file in the Render Queue `Output To` field, or change the file
+Click **Repair** to rename the output to '{product_name}', then **refresh**
+the publisher (circular arrow button).
+
+Or rename the file in the Render Queue `Output To` field, or change the file
 name pattern of the preset in
 `ayon+settings://aftereffects/publish/ValidateOutputModule`.
 </description>
@@ -58,6 +69,10 @@ Output Module {index} writes '{actual}', expected {expected}.
 
 Change the format in the Output Module, or add the extension to the preset
 in `ayon+settings://aftereffects/publish/ValidateOutputModule`.
+
+**Repair** cannot rename the extension on its own: the format decides what
+After Effects writes, so it is only written when the preset has an Output
+Module template.
 </description>
 </error>
 <error id="sequence">
@@ -71,7 +86,10 @@ Output Module {index} writes '{actual}'.
 
 ### How to repair?
 
-Use a `[#####]` token in the file name for frame sequences, and a plain
+Click **Repair** to rewrite the name with the configured frame token and
+padding, then **refresh** the publisher (circular arrow button).
+
+Or use a `[#####]` token in the file name for frame sequences, and a plain
 name for single file formats. Or change the preset in
 `ayon+settings://aftereffects/publish/ValidateOutputModule`.
 </description>
@@ -91,6 +109,9 @@ Pick one of the allowed presets: {allowed}
 
     Or add the format to
     `ayon+settings://aftereffects/publish/ValidateOutputModule`.
+
+**Repair** can only switch the format when the preset has an Output Module
+template; without one, set it in the Output Module by hand.
 </description>
 </error>
 </root>

@@ -11,4 +11,51 @@
 Remove `{name}` or provide missing file.
 </description>
 </error>
+<error id="missing_source">
+<title>Source footage missing</title>
+<description>
+## Composition has layers without a usable source
+
+Composition '{comp_name}' has {count} layer(s) that cannot render:
+
+{layers}
+
+After Effects still renders these layers, but the frames come out black, and
+the published version would be empty.
+
+This usually means the footage was removed from the project, or its file is
+no longer where the project expects it. Removing a loaded item with
+*AYON > Manage > Remove* does not remove the layers that used it.
+
+### How to repair?
+
+- Undo the removal in After Effects, or load/import the footage again.
+- Or delete or replace the affected layers.
+- Then **refresh** the publisher (circular arrow button) and publish again.
+
+If a layer is listed but is fine in After Effects, ask an admin to update
+the AYON extension: older versions of the extension cannot report layer
+sources.
+</description>
+</error>
+<error id="problems">
+<title>Footage problems</title>
+<description>
+## Composition cannot render
+
+Composition '{comp_name}' has {count} footage problems:
+
+{problems}
+
+### How to repair?
+
+Fix every item listed above:
+
+- provide the file, or remove the footage item, for a missing file;
+- undo the removal and load the footage again, or delete or replace the
+  affected layers, for a layer without a source.
+
+Then **refresh** the publisher (circular arrow button) and publish again.
+</description>
+</error>
 </root>

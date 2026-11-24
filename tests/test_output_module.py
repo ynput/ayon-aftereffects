@@ -192,6 +192,22 @@ def test_printf_pattern_is_rejected():
     assert "name" not in keys(problems), keys(problems)
 
 
+def test_appended_frame_number_reports_the_missing_token():
+    # With no [#####] token AE appends the frame number after the
+    # extension, 'my_shot.exr00835'. That is a missing token, not a bad
+    # extension, so it must be reported as one.
+    problems = validate(
+        [
+            {
+                "index": 1,
+                "format": "OpenEXR",
+                "file_name": "file:///D:/out/my_shot.exr00835",
+            }
+        ]
+    )
+    assert keys(problems) == ["appended"], keys(problems)
+
+
 def test_unknown_format():
     problems = validate([
         {
