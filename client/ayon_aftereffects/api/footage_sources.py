@@ -2,20 +2,18 @@
 
 `ValidateFootageItems` compares the paths of the footage items that still
 exist in the After Effects project. That misses the case where the footage
-itself is gone - an artist removed it with *AYON > Manage > Remove*, or the
-project references an item that was deleted - because then there is no
-footage item left to check. The layers that used it stay in the
-compositions, After Effects renders them as black frames, and the publish
-reports nothing.
+itself is gone - an artist removed it, or the project references an item that
+was deleted - because then there is no footage item left to check. The layers
+that used it stay in the compositions, After Effects renders them as black
+frames, and the publish reports nothing.
 
-The extension reports those layers, this module turns the records into
-artist messages. Pure Python on purpose: no AYON or After Effects imports,
-so the formatting can be unit tested without launching After Effects.
+The extension reports those layers, this module turns the records into the
+artist message. Pure Python on purpose: no AYON or After Effects imports, so
+the formatting can be unit tested without launching After Effects.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
 #: Reason reported by the extension, in artist words.
@@ -25,68 +23,40 @@ REASONS = {
     "file_missing": "source file is missing",
 }
 
-#: Placeholder used when a layer has no name.
+#: Layer name used when the host reports none.
 _UNNAMED_LAYER = "<unnamed layer>"
 
-
-@dataclass(frozen=True)
-class MissingSource:
-    """A layer of a composition that cannot render."""
-
-    layer: str
-    reason: str
-
-    @property
-    def description(self) -> str:
-        """Artist facing description of this problem."""
-        return "{} ({})".format(self.layer, self.reason)
+#: How many layers the summary names before it counts the rest.
+_SUMMARY_LIMIT = 5
 
 
-def collect_missing_sources(
-    records: Iterable[Any] | None,
-) -> list[MissingSource]:
-    """Normalize layer source records reported by the extension.
+def summarize_missing_sources(records: Iterable[Any] | None) -> str:
+    """Return a one line summary of the layers that cannot render.
 
     Args:
-        records: Dictionaries or models with `layer` and `reason`.
+        records: Layer source records reported by the extension, mappings
+            or models with `layer` and `reason`.
 
     Returns:
-        One entry per unusable layer, duplicates removed.
+        Comma separated "layer (reason)" entries, at most
+        `_SUMMARY_LIMIT`, or an empty string when every layer can render.
     """
     seen = set()
-    sources: list[MissingSource] = []
+    parts = []
     for record in records or []:
         layer = str(_get(record, "layer", "") or "").strip()
         layer = layer or _UNNAMED_LAYER
         code = str(_get(record, "reason", "") or "").strip()
         reason = REASONS.get(code, code or "unknown reason")
 
-        key = (layer, reason)
-        if key in seen:
+        if (layer, reason) in seen:
             continue
-        seen.add(key)
-        sources.append(MissingSource(layer=layer, reason=reason))
+        seen.add((layer, reason))
+        parts.append("{} ({})".format(layer, reason))
 
-    return sources
-
-
-def summarize_missing_sources(records: Iterable[Any] | None) -> str:
-    """Return a one line summary of the unusable layers.
-
-    Args:
-        records: Layer source records reported by the extension.
-
-    Returns:
-        Comma separated descriptions, or an empty string.
-    """
-    sources = collect_missing_sources(records)
-    if not sources:
-        return ""
-
-    shown = [source.description for source in sources[:5]]
-    if len(sources) > len(shown):
-        shown.append("and {} more".format(len(sources) - len(shown)))
-
+    shown = parts[:_SUMMARY_LIMIT]
+    if len(parts) > len(shown):
+        shown.append("and {} more".format(len(parts) - len(shown)))
     return ", ".join(shown)
 
 

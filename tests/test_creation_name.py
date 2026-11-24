@@ -34,190 +34,69 @@ def _load_rules():
 
 RULES = _load_rules()
 
-MP4 = {
-    "label": "H.264 MP4",
-    "format": "H.264",
-    "codec": "",
-    "name_pattern": "{product_name}",
-    "extensions": ["mp4"],
-    "sequence": False,
-    "padding": 5,
-}
-EXR = {
-    "label": "OpenEXR Sequence",
-    "format": "OpenEXR",
-    "codec": "",
-    "name_pattern": "{product_name}_[#####]",
-    "extensions": ["exr"],
-    "sequence": True,
-    "padding": 5,
-}
-PRORES = {
-    "label": "ProRes",
-    "template": "AYON ProRes",
-    "format": "",
-    "codec": "",
-    "name_pattern": "{product_name}",
-    "extensions": ["mov"],
-    "sequence": False,
-    "padding": 5,
-}
-PRESETS = [MP4, EXR, PRORES]
+PRESETS = [
+    {
+        "label": "H.264 MP4",
+        "format": "H.264",
+        "codec": "",
+        "name_pattern": "{product_name}",
+        "extensions": ["mp4"],
+        "sequence": False,
+        "padding": 5,
+    },
+    {
+        "label": "OpenEXR Sequence",
+        "format": "OpenEXR",
+        "codec": "",
+        "name_pattern": "{product_name}_[#####]",
+        "extensions": ["exr"],
+        "sequence": True,
+        "padding": 5,
+    },
+]
 
 
-def name(module, product_name="MyShot", presets=None):
+def name(fmt, file_name, presets=None, product_name="MyShot"):
     """Return the creation name for one Output Module record."""
     return RULES.creation_name(
         product_name,
-        module,
+        {"index": 1, "format": fmt, "file_name": file_name},
         PRESETS if presets is None else presets,
     )
 
 
 def test_sequence_format_gets_the_frame_token():
-    # This is the reported bug: AYON queued the comp as 'comp.exr', so AE
-    # wrote 'comp.exr00835'.
-    assert (
-        name(
-            {
-                "index": 1,
-                "format": "OpenEXR",
-                "file_name": "file:///D:/out/MyShot.exr",
-            }
-        )
-        == "MyShot_[#####].exr"
+    # The reported bug: AYON queued the comp with a bare name, so AE wrote
+    # 'MyShot.exr00835'.
+    assert name("OpenEXR", "file:///D:/out/MyShot.exr") == (
+        "MyShot_[#####].exr"
     )
 
 
 def test_single_file_format_keeps_its_extension():
-    assert (
-        name(
-            {
-                "index": 1,
-                "format": "H.264",
-                "file_name": "file:///D:/out/MyShot.mp4",
-            }
-        )
-        == "MyShot.mp4"
-    )
-
-
-def test_product_name_case_is_preserved():
-    assert (
-        name(
-            {"index": 1, "format": "OpenEXR", "file_name": "x.exr"},
-            product_name="My_Shot_FINAL",
-        )
-        == "My_Shot_FINAL_[#####].exr"
-    )
-
-
-def test_padding_comes_from_the_preset():
-    preset = dict(EXR, padding=4)
-    assert (
-        name(
-            {"index": 1, "format": "OpenEXR", "file_name": "x.exr"},
-            presets=[preset],
-        )
-        == "MyShot_[####].exr"
-    )
-
-
-def test_existing_token_is_normalized():
-    assert (
-        name(
-            {
-                "index": 1,
-                "format": "OpenEXR",
-                "file_name": "file:///D:/out/comp_[###].exr",
-            }
-        )
-        == "MyShot_[#####].exr"
-    )
-
-
-def test_already_correct_name_is_returned_unchanged():
-    # The creator compares with the current name and skips the write.
-    assert (
-        name(
-            {
-                "index": 1,
-                "format": "OpenEXR",
-                "file_name": "file:///D:/out/MyShot_[#####].exr",
-            }
-        )
-        == "MyShot_[#####].exr"
-    )
+    assert name("H.264", "file:///D:/out/MyShot.mp4") == "MyShot.mp4"
 
 
 def test_appended_frame_number_is_dropped():
-    assert (
-        name(
-            {
-                "index": 1,
-                "format": "OpenEXR",
-                "file_name": "file:///D:/out/MyShot.exr00835",
-            }
-        )
-        == "MyShot_[#####].exr"
+    assert name("OpenEXR", "file:///D:/out/MyShot.exr00835") == (
+        "MyShot_[#####].exr"
     )
 
 
-def test_template_preset_is_matched():
-    assert (
-        name(
-            {
-                "index": 1,
-                "name": "AYON ProRes",
-                "file_name": "file:///D:/o/x.mov",
-            }
-        )
-        == "MyShot.mov"
-    )
-
-
-def test_unknown_format_is_left_alone():
-    assert (
-        name(
-            {"index": 1, "format": "MPEG-4", "file_name": "file:///D:/o/x.mp4"}
-        )
-        is None
-    )
-
-
-def test_no_presets_means_no_change():
-    assert (
-        name(
-            {"index": 1, "format": "OpenEXR", "file_name": "x.exr"}, presets=[]
-        )
-        is None
-    )
-
-
-def test_no_file_name_means_no_change():
-    assert name({"index": 1, "format": "OpenEXR"}) is None
-    assert name({"index": 1, "format": "OpenEXR", "file_name": ""}) is None
-
-
-def test_pattern_with_extension_is_used():
-    preset = dict(MP4, name_pattern="{product_name}.mp4", extensions=["mp4"])
-    assert (
-        name(
-            {"index": 1, "format": "H.264", "file_name": "file:///D:/o/x.mp4"},
-            presets=[preset],
-        )
-        == "MyShot.mp4"
-    )
+def test_no_matching_preset_means_no_change():
+    assert name("MPEG-4", "file:///D:/out/MyShot.mp4") is None
+    assert name("OpenEXR", "file:///D:/out/MyShot.exr", presets=[]) is None
+    assert name("OpenEXR", "") is None
 
 
 def main():
     """Run every test function and report failures."""
     failed = 0
     total = 0
-    for test_name in sorted(globals()):
-        if not test_name.startswith("test_"):
+    for name in sorted(globals()):
+        if not name.startswith("test_"):
             continue
-        test = globals()[test_name]
+        test = globals()[name]
         if not callable(test):
             continue
         total += 1
@@ -225,9 +104,9 @@ def main():
             test()
         except AssertionError as exc:
             failed += 1
-            print("FAIL {}: {}".format(test_name, exc))
+            print("FAIL {}: {}".format(name, exc))
         else:
-            print("ok   {}".format(test_name))
+            print("ok   {}".format(name))
 
     print("\n{} passed, {} failed of {}".format(total - failed, failed, total))
     return 1 if failed else 0

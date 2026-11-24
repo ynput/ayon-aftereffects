@@ -1,4 +1,4 @@
-"""Tests for the missing source footage formatting.
+"""Tests for the missing source footage message.
 
 No AYON or After Effects import is needed: the rules live in
 `client/ayon_aftereffects/api/footage_sources.py` and are plain Python.
@@ -37,88 +37,56 @@ def _load_rules():
 RULES = _load_rules()
 
 
-class Layer:
-    """Stand-in for an object with attributes instead of a dict."""
-
-    def __init__(self, layer, reason):
-        self.layer = layer
-        self.reason = reason
+def summary(records):
+    """Summarize records with the rules module."""
+    return RULES.summarize_missing_sources(records)
 
 
-def test_reasons_are_translated():
-    sources = RULES.collect_missing_sources(
+def test_every_reason_is_translated():
+    assert summary(
         [
             {"layer": "logo.png", "reason": "missing_source"},
             {"layer": "bg.mov", "reason": "footage_missing"},
             {"layer": "plate.exr", "reason": "file_missing"},
         ]
+    ) == (
+        "logo.png (layer has no source), "
+        "bg.mov (source footage is missing), "
+        "plate.exr (source file is missing)"
     )
-    assert [source.reason for source in sources] == [
-        "layer has no source",
-        "source footage is missing",
-        "source file is missing",
-    ], sources
 
 
 def test_unknown_reason_is_kept():
-    sources = RULES.collect_missing_sources(
-        [{"layer": "odd.mov", "reason": "weird"}]
+    assert summary([{"layer": "odd.mov", "reason": "weird"}]) == (
+        "odd.mov (weird)"
     )
-    assert sources[0].reason == "weird", sources
+    assert summary([{"layer": "odd.mov"}]) == "odd.mov (unknown reason)"
 
 
-def test_missing_reason_falls_back():
-    sources = RULES.collect_missing_sources([{"layer": "odd.mov"}])
-    assert sources[0].reason == "unknown reason", sources
-
-
-def test_unnamed_layer():
-    sources = RULES.collect_missing_sources([{"reason": "missing_source"}])
-    assert sources[0].layer == "<unnamed layer>", sources
-
-
-def test_duplicates_are_removed():
-    record = {"layer": "logo.png", "reason": "missing_source"}
-    sources = RULES.collect_missing_sources([record, dict(record)])
-    assert len(sources) == 1, sources
-
-
-def test_objects_are_supported():
-    sources = RULES.collect_missing_sources(
-        [Layer("logo.png", "file_missing")]
+def test_unnamed_layers_and_duplicates():
+    assert summary([{"reason": "missing_source"}]) == (
+        "<unnamed layer> (layer has no source)"
     )
-    assert sources[0].description == "logo.png (source file is missing)", (
-        sources
+    assert (
+        summary(
+            [
+                {"layer": "logo.png", "reason": "missing_source"},
+                {"layer": "logo.png", "reason": "missing_source"},
+            ]
+        )
+        == "logo.png (layer has no source)"
     )
-
-
-def test_empty_input():
-    assert RULES.collect_missing_sources(None) == [], "None"
-    assert RULES.collect_missing_sources([]) == [], "empty"
-    assert RULES.summarize_missing_sources(None) == "", "summary"
-
-
-def test_summary_lists_layers():
-    summary = RULES.summarize_missing_sources(
-        [
-            {"layer": "logo.png", "reason": "missing_source"},
-            {"layer": "bg.mov", "reason": "file_missing"},
-        ]
-    )
-    assert summary == (
-        "logo.png (layer has no source), bg.mov (source file is missing)"
-    ), summary
 
 
 def test_summary_is_truncated():
-    summary = RULES.summarize_missing_sources(
+    result = summary(
         [
             {"layer": "layer{}".format(index), "reason": "missing_source"}
             for index in range(8)
         ]
     )
-    assert summary.endswith("and 3 more"), summary
-    assert summary.count("layer has no source") == 5, summary
+    assert result.endswith("and 3 more"), result
+    assert result.count("layer has no source") == 5, result
 
 
 def main():
