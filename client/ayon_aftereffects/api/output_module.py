@@ -283,6 +283,10 @@ def creation_name(
     if not actual.name:
         return None
 
+    for candidate in _matching_presets(module, normalized_presets, actual):
+        if not _validate_preset(product_name, module, candidate, actual):
+            return actual.name
+
     preset = match_preset(module, normalized_presets, actual)
     if preset is None:
         return None
