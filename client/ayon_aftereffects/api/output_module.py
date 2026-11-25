@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 import urllib.parse
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Iterator, Mapping
 
 #: Frame padding assumed when a preset does not configure it.
 DEFAULT_PADDING = 5
@@ -157,6 +157,16 @@ def match_preset(
     Returns:
         Matching preset, or `None` when the module is not allowed.
     """
+    return next(_matching_presets(module, presets, actual), None)
+
+
+def _matching_presets(
+    module: Any,
+    presets: Iterable[Mapping[str, Any]],
+    actual: OutputName,
+) -> Iterator[Mapping[str, Any]]:
+    """Yield matching presets in template, format, then extension order."""
+    presets = list(presets)
     module_format = _text(_get(module, "format", ""))
     module_codec = _text(_get(module, "codec", ""))
     module_names = {
@@ -166,21 +176,26 @@ def match_preset(
 
     for preset in presets:
         if preset["template"] and _text(preset["template"]) in module_names:
-            return preset
+            yield preset
 
     for preset in presets:
+        if preset["template"] and _text(preset["template"]) in module_names:
+            continue
         if not preset["format"] or preset["format"] != module_format:
             continue
         if preset["codec"] and preset["codec"] != module_codec:
             continue
-        return preset
+        yield preset
 
     if not module_format:
         for preset in presets:
+            if (
+                preset["template"]
+                and _text(preset["template"]) in module_names
+            ):
+                continue
             if actual.ext and actual.ext in preset["extensions"]:
-                return preset
-
-    return None
+                yield preset
 
 
 def validate_output_modules(
@@ -188,7 +203,10 @@ def validate_output_modules(
     modules: Iterable[Any],
     presets: Iterable[Any],
 ) -> list[OutputProblem]:
-    """Check every Output Module against the allowed presets.
+    """Check every Output Module against all matching allowed presets.
+
+    An Output Module is valid if any matching preset passes every rule.
+    If none passes, report the first matching preset's problems.
 
     Args:
         product_name: Product name of the instance, used for the name
@@ -390,8 +408,15 @@ def _validate_module(
         ]
 
     actual = parse_output_name(raw_name)
-    preset = match_preset(module, presets, actual)
-    if preset is None:
+    first_problems = None
+    for preset in _matching_presets(module, presets, actual):
+        problems = _validate_preset(product_name, module, preset, actual)
+        if not problems:
+            return []
+        if first_problems is None:
+            first_problems = problems
+
+    if first_problems is None:
         configured = (
             _get(module, "format", "") or actual.ext or "unknown"
         )
@@ -411,7 +436,17 @@ def _validate_module(
                 },
             )
         ]
+    return first_problems
 
+
+def _validate_preset(
+    product_name: str,
+    module: Any,
+    preset: Mapping[str, Any],
+    actual: OutputName,
+) -> list[OutputProblem]:
+    """Check all rules for one matching preset."""
+    index = _get(module, "index", 1) or 1
     label = (
         preset["label"] or preset["format"] or preset["template"] or "preset"
     )

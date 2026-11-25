@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import sys
 
-from _helpers import MP4, PRESETS, PRORES, load_api_module, run
+from _helpers import EXR, MP4, PRESETS, PRORES, load_api_module, run
 
 RULES = load_api_module("ae_output_module", "output_module.py")
 
@@ -51,6 +51,74 @@ def test_percent_encoded_exr_sequence_is_valid():
         {"index": 1, "format": "OpenEXR", "file_name": EXR_URL}
     ])
     assert keys(problems) == [], keys(problems)
+
+
+def test_later_matching_padding_is_valid_and_not_repaired():
+    module = {"index": 1, "format": "OpenEXR", "file_name": EXR_URL}
+    presets = [dict(EXR, padding=4), EXR]
+    assert keys(validate([module], presets=presets)) == []
+    assert not plan([module], presets=presets)
+
+
+def test_later_matching_candidate_checks_all_rules():
+    module = {
+        "index": 1,
+        "name": "First template",
+        "format": "OpenEXR",
+        "codec": "Zip",
+        "file_name": "my_shot_final_[#####].exr",
+    }
+    presets = [
+        dict(EXR, template="First template", format="Other", codec="Other"),
+        dict(EXR, extensions=["png"]),
+        dict(EXR, name_pattern="{product_name}_other_[#####]"),
+        dict(EXR, sequence=False),
+        dict(EXR, codec="Zip", name_pattern="{product_name}_final_[#####]"),
+    ]
+    assert keys(validate([module], presets=presets)) == []
+    assert not plan([module], presets=presets)
+
+
+def test_later_extension_fallback_candidate_is_valid():
+    module = {"index": 1, "file_name": EXR_URL}
+    assert keys(validate([module], presets=[dict(EXR, padding=4), EXR])) == []
+
+
+def test_later_matching_template_candidate_is_valid():
+    module = {"index": 1, "name": "Shared template", "file_name": EXR_URL}
+    presets = [
+        dict(EXR, template="Shared template", padding=4),
+        dict(EXR, template="Shared template"),
+    ]
+    assert keys(validate([module], presets=presets)) == []
+    assert not plan([module], presets=presets)
+
+
+def test_nonmatching_format_and_codec_are_not_alternatives():
+    module = {
+        "index": 1,
+        "format": "OpenEXR",
+        "codec": "Zip",
+        "file_name": EXR_URL,
+    }
+    presets = [
+        dict(EXR, padding=4, codec="Zip"),
+        dict(EXR, format="Other", codec="Zip"),
+        dict(EXR, codec="Other"),
+    ]
+    assert keys(validate([module], presets=presets)) == ["padding"]
+
+
+def test_candidates_cannot_combine_partial_matches():
+    module = {"index": 1, "format": "OpenEXR", "file_name": EXR_URL}
+    presets = [
+        dict(EXR, padding=4),
+        dict(EXR, extensions=["png"]),
+    ]
+    assert keys(validate([module], presets=presets)) == ["padding"]
+    assert written(plan([module], presets=presets)) == [
+        (1, "my_shot_[####].exr", "")
+    ]
 
 
 def test_template_match_is_valid():
