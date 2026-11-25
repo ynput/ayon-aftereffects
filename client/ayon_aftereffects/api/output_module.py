@@ -336,7 +336,12 @@ def build_repair(
             problem.key in ("not_allowed", "format", "codec")
             for problem in problems
         )
-        template = preset["template"] if needs_template else ""
+        needs_extension = any(
+            problem.key == "extension" for problem in problems
+        )
+        template = preset["template"] if (
+            needs_template or needs_extension
+        ) else ""
         if needs_template and not template:
             notes.append(
                 "Output Module {}: format or codec does not match '{}' and "
