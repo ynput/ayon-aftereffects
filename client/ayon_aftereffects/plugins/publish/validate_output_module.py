@@ -108,7 +108,8 @@ class ValidateOutputModule(
             },
         )
 
-    def repair(self, instance):
+    @classmethod
+    def repair(cls, instance):
         """Write the Output Module settings the instance should have.
 
         A plain method, not a classmethod: `RepairAction` calls it on the
@@ -118,24 +119,24 @@ class ValidateOutputModule(
         Args:
             instance (pyblish.api.Instance): Publish instance.
         """
-        modules = self._collect_modules(instance)
+        modules = cls._collect_modules(instance)
         plan = build_repair(
             instance.data.get("productName", ""),
             modules,
-            self.presets,
+            cls.presets,
         )
         for note in plan.notes:
-            self.log.warning(note)
+            cls.log.warning(note)
 
         if not plan.writes:
-            self.log.info("Nothing to repair automatically.")
+            cls.log.info("Nothing to repair automatically.")
             return
 
         comp_id = instance.data.get("comp_id")
         try:
             stub = get_stub()
         except ConnectionNotEstablishedYet:
-            self.log.warning(
+            cls.log.warning(
                 "Not connected to After Effects, cannot repair the Output "
                 "Module."
             )
@@ -150,7 +151,7 @@ class ValidateOutputModule(
                     template=write.template,
                 )
             except Exception:
-                self.log.warning(
+                cls.log.warning(
                     "Cannot write Output Module %s. Is the AYON extension "
                     "up to date?",
                     write.index,
@@ -159,23 +160,24 @@ class ValidateOutputModule(
                 continue
 
             if result.get("error"):
-                self.log.warning(result["error"])
+                cls.log.warning(result["error"])
                 continue
 
             written = result.get("file_name") or write.file_name
             if result.get("template_applied"):
-                self.log.info(
+                cls.log.info(
                     "Output Module %s set to %s with template '%s'.",
                     write.index,
                     written,
                     write.template,
                 )
             else:
-                self.log.info(
+                cls.log.info(
                     "Output Module %s set to %s.", write.index, written
                 )
 
-    def _collect_modules(self, instance):
+    @classmethod
+    def _collect_modules(cls, instance):
         """Return Output Module records for the instance composition.
 
         Falls back to the file names already collected by
@@ -195,19 +197,19 @@ class ValidateOutputModule(
         ]
 
         comp_id = instance.data.get("comp_id")
-        if not self.check_format or comp_id is None:
+        if not cls.check_format or comp_id is None:
             return fallback
 
         try:
             modules = get_stub().get_output_module_info(comp_id)
         except ConnectionNotEstablishedYet:
-            self.log.warning(
+            cls.log.warning(
                 "Not connected to After Effects, checking output file "
                 "names only."
             )
             return fallback
         except Exception:
-            self.log.warning(
+            cls.log.warning(
                 "Cannot read Output Module settings, checking output "
                 "file names only. Is the AYON extension up to date?",
                 exc_info=True,
