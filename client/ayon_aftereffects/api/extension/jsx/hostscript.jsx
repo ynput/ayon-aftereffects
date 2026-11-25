@@ -767,6 +767,7 @@ function fixOutputModule(comp_id, index, file_name, template){
         file_info["Base Path"] = folder;
     }
     om.setSettings({"Output File Info": file_info});
+    om = render_item.outputModule(index);
 
     return JSON.stringify({
         "index": index,
