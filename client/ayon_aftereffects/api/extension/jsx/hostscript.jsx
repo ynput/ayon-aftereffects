@@ -612,6 +612,254 @@ function getRenderInfo(comp_id){
     return '[' + output_metadata.join() + ']';
 }
 
+function _outputSetting(settings, names) {
+    /**
+     * Read a single Output Module setting in an AE version independent way.
+     *
+     * Newer AE versions return the format options flat next to
+     * "Output File Info" (settings["Format"]), while older versions nest
+     * them in the "Video Output" group. In newer versions "Video Output"
+     * is a plain flag ("true"), not an object, so it must not be indexed.
+     *
+     * Args:
+     *     settings (dict): Result of getSettings(STRING).
+     *     names (list): Setting names to try, in order.
+     * Returns:
+     *     (str): Setting value or empty string.
+     */
+    for (var i = 0; i < names.length; ++i) {
+        var value = settings[names[i]];
+        if (value === undefined || value === null || typeof value === "object") {
+            continue;
+        }
+        return String(value);
+    }
+
+    var group = settings["Video Output"];
+    if (group && typeof group === "object") {
+        for (var j = 0; j < names.length; ++j) {
+            var nested = group[names[j]];
+            if (nested === undefined || nested === null) {
+                continue;
+            }
+            return String(nested);
+        }
+    }
+    return "";
+}
+
+function getOutputModuleInfo(comp_id){
+    /**
+     * Read the Output Module settings of the Render Queue item of `comp_id`.
+     *
+     * Used by the Validate Output Module plugin to check format, codec and
+     * output file name before a render starts. Format and codec are the
+     * labels shown in the Output Module dialog, so they are English strings
+     * such as "H.264" or "OpenEXR" and can be empty for formats without a
+     * codec. The full `settings` object is passed along so a studio can
+     * discover the exact keys of its AE version and locale.
+     *
+     * Args:
+     *     comp_id (int): Composition item id.
+     * Returns:
+     *     (str): JSON list with one record per output module:
+     *         index, name, template, file_name, format, codec, settings
+     */
+    var comp = app.project.itemByID(comp_id);
+    if (!comp){
+        return _prepareError(
+            "Composition with '" + comp_id + "' wasn't found! " +
+            "Recreate publishable instance(s)");
+    }
+
+    var records = [];
+    try{
+        var queue = app.project.renderQueue;
+        for (var i = 1; i <= queue.numItems; ++i){
+            var render_item = queue.item(i);
+            if (!render_item.comp || render_item.comp.id != comp_id){
+                continue;
+            }
+
+            for (var j = 1; j <= render_item.numOutputModules; ++j){
+                var om = render_item.outputModule(j);
+                var settings = om.getSettings(GetSettingsFormat.STRING);
+                records.push(JSON.stringify({
+                    "index": j,
+                    "name": om.name || "",
+                    "template": om.template || "",
+                    "file_name": om.file ? om.file.toString() : "",
+                    "format": _outputSetting(settings, ["Format"]),
+                    "codec": _outputSetting(
+                        settings, ["Codec", "Video Codec"]),
+                    "settings": settings
+                }));
+            }
+        }
+    } catch (error){
+        return _prepareError(
+            "Cannot read Output Module settings: " + error.toString());
+    }
+
+    if (!records.length){
+        return _prepareError(
+            "There is no Render Queue item for '" + comp.name + "'!");
+    }
+
+    return '[' + records.join() + ']';
+}
+
+function fixOutputModule(comp_id, index, file_name, template){
+    /**
+     * Repair the Output Module of the Render Queue item of `comp_id`.
+     *
+     * The output folder is kept and only the file name is replaced, since
+     * AYON rewrites the folder for every render anyway. `setSettings()` is
+     * used instead of assigning `om.file` so After Effects keeps appending
+     * the extension of the applied format.
+     *
+     * A template is applied first and only when asked for: it is what
+     * changes format and codec, and a failed template must not stop the
+     * file name from being written.
+     *
+     * Args:
+     *     comp_id (int): Composition item id.
+     *     index (int): Output Module index, starting at 1.
+     *     file_name (str): New output file name without folders.
+     *     template (str): Output Module template to apply, empty to skip.
+     * Returns:
+     *     (str): JSON record with index, file_name, template_applied and
+     *         error when the template could not be applied.
+     */
+    var render_item = _getRenderQueueItem(comp_id);
+    if (!render_item){
+        return _prepareError(
+            "There is no item in Render Queue for '" + comp_id + "'!");
+    }
+    if (index < 1 || index > render_item.numOutputModules){
+        return _prepareError(
+            "Output Module " + index + " does not exist for '" +
+            render_item.comp.name + "'!");
+    }
+
+    var om = render_item.outputModule(index);
+    var template_applied = false;
+    var template_error = "";
+    if (template){
+        try{
+            om.applyTemplate(template);
+            template_applied = true;
+        } catch (error){
+            template_error = "Output Module template '" + template +
+                "' could not be applied: " + error.toString();
+        }
+    }
+
+    var folder = "";
+    try{
+        folder = om.file ? om.file.path : "";
+    } catch (error){
+        folder = "";
+    }
+
+    var file_info = {"File Name": file_name};
+    if (folder){
+        file_info["Base Path"] = folder;
+    }
+    om.setSettings({"Output File Info": file_info});
+    om = render_item.outputModule(index);
+
+    return JSON.stringify({
+        "index": index,
+        "file_name": om.file ? om.file.toString() : "",
+        "template_applied": template_applied,
+        "error": template_error
+    });
+}
+
+function getMissingLayerSources(comp_id){
+    /**
+     * Report a composition that cannot render, and why.
+     *
+     * Footage removed from the project leaves the layers behind: After
+     * Effects renders them black and no footage item is left for
+     * ValidateFootageItems to check. Text, shape, adjustment and null
+     * layers legitimately have no source and are skipped.
+     *
+     * A composition with no layer at all - the artist deleted the only
+     * layer, or only cameras and lights are left - renders black too, so
+     * it is reported with the 'empty_comp' reason.
+     *
+     * Only the layers of `comp_id` are inspected, not the layers of the
+     * compositions nested inside it.
+     *
+     * Args:
+     *     comp_id (int): Composition item id.
+     * Returns:
+     *     (str): JSON list of records with layer and reason
+     *         (missing_source, footage_missing, file_missing or empty_comp).
+     */
+    var comp = app.project.itemByID(comp_id);
+    if (!comp){
+        return _prepareError(
+            "Composition with '" + comp_id + "' wasn't found!");
+    }
+    if (!(comp instanceof CompItem)){
+        return _prepareSingleValue([]);
+    }
+
+    var problems = [];
+    var av_layers = 0;
+    for (var i = 1; i <= comp.numLayers; ++i){
+        var layer = comp.layer(i);
+        try{
+            if (!(layer instanceof AVLayer)){
+                continue;
+            }
+            ++av_layers;
+            if (layer instanceof TextLayer || layer instanceof ShapeLayer){
+                continue;
+            }
+            if (layer.adjustmentLayer || layer.nullLayer){
+                continue;
+            }
+
+            var source = layer.source;
+            if (!source){
+                problems.push({
+                    "layer": layer.name,
+                    "reason": "missing_source"
+                });
+                continue;
+            }
+            if (source.footageMissing){
+                problems.push({
+                    "layer": layer.name,
+                    "reason": "footage_missing"
+                });
+                continue;
+            }
+
+            var main_source = source.mainSource;
+            if (main_source && main_source.file &&
+                    !main_source.file.exists){
+                problems.push({
+                    "layer": layer.name,
+                    "reason": "file_missing"
+                });
+            }
+        } catch (error){
+            // A layer that cannot be inspected is not a missing source.
+        }
+    }
+
+    if (!av_layers){
+        problems.push({"layer": "", "reason": "empty_comp"});
+    }
+
+    return _prepareSingleValue(problems);
+}
+
 function getAudioUrlForComp(comp_id){
     /**
      * Searches composition for audio layer

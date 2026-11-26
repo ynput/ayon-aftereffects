@@ -296,6 +296,38 @@ function main(websocket_url){
             });
     });
 
+    RPC.addRoute('AfterEffects.get_output_module_info', function (data) {
+        log.warn('Server called client route "get_output_module_info":', data);
+        return runEvalScript("getOutputModuleInfo(" + data.comp_id +")")
+            .then(function(result){
+                log.warn("get_output_module_info: " + result);
+                return result;
+            });
+    });
+
+    RPC.addRoute('AfterEffects.fix_output_module', function (data) {
+        log.warn('Server called client route "fix_output_module":', data);
+        var escapedName = EscapeStringForJSX(data.file_name || "");
+        var escapedTemplate = EscapeStringForJSX(data.template || "");
+        return runEvalScript("fixOutputModule(" + data.comp_id + "," +
+                             data.index + ",'" + escapedName + "','" +
+                             escapedTemplate + "')")
+            .then(function(result){
+                log.warn("fix_output_module: " + result);
+                return result;
+            });
+    });
+
+    RPC.addRoute('AfterEffects.get_missing_layer_sources', function (data) {
+        log.warn('Server called client route ' +
+                 '"get_missing_layer_sources":', data);
+        return runEvalScript("getMissingLayerSources(" + data.comp_id + ")")
+            .then(function(result){
+                log.warn("get_missing_layer_sources: " + result);
+                return result;
+            });
+    });
+
     RPC.addRoute('AfterEffects.get_audio_url', function (data) {
         log.warn('Server called client route "get_audio_url":', data);
         return runEvalScript("getAudioUrlForComp(" + data.item_id + ")")
