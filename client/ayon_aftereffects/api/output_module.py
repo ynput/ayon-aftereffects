@@ -663,6 +663,9 @@ def _plan_name(
         # the extension. Renaming '.mov' to '.mp4' would just move the
         # failure from validation to extraction.
         extension = _real_extension(preset, actual) or pattern_extension
+        if not extension and preset["extensions"]:
+            # Nothing to preserve, so the preset names the extension.
+            extension = preset["extensions"][0]
         if preset["extensions"] and extension not in preset["extensions"]:
             current = "." + extension if extension else "no extension"
             note = (
@@ -706,6 +709,11 @@ def _name_from_pattern(
             stem = _SEQUENCE_TOKEN_RE.sub("[" + hashes + "]", stem)
         else:
             stem = "{}_[{}]".format(stem, hashes)
+    elif _SEQUENCE_TOKEN_RE.search(stem):
+        # A token in a single file preset is a configuration mistake. The
+        # sequence flag wins, otherwise the name it produces is rejected by
+        # the preset itself and Repair could never converge.
+        stem = _SEQUENCE_TOKEN_RE.sub("", stem).rstrip("_-.")
 
     extension = extension or pattern_extension
     return stem + ("." + extension if extension else "")

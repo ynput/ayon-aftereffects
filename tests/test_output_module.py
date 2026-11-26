@@ -629,5 +629,59 @@ def test_codec_is_named_when_no_preset_allows_it():
     assert "prores 422 hq" in message, message
 
 
+def test_missing_name_is_repaired_with_the_preset_extension():
+    # Nothing to preserve, so the preset names the extension instead of
+    # Repair writing a name without one.
+    preset = dict(MP4, name_pattern="{product_name}_main")
+    repair_plan = plan(
+        [{"index": 1, "format": "H.264", "file_name": ""}],
+        presets=[preset],
+    )
+    assert written(repair_plan) == [(1, "my_shot_main.mp4", "")], written(
+        repair_plan
+    )
+    after = validate(
+        [
+            {
+                "index": 1,
+                "format": "H.264",
+                "file_name": "file:///D:/out/my_shot_main.mp4",
+            }
+        ],
+        presets=[preset],
+    )
+    assert keys(after) == [], keys(after)
+
+
+def test_token_in_a_single_file_preset_is_dropped():
+    # A token in a single file preset is a configuration mistake; the
+    # sequence flag wins, otherwise Repair writes a name the preset rejects.
+    preset = dict(EXR, sequence=False)
+    repair_plan = plan(
+        [
+            {
+                "index": 1,
+                "format": "OpenEXR",
+                "file_name": "file:///D:/out/x.exr",
+            }
+        ],
+        presets=[preset],
+    )
+    assert written(repair_plan) == [(1, "my_shot.exr", "")], written(
+        repair_plan
+    )
+    after = validate(
+        [
+            {
+                "index": 1,
+                "format": "OpenEXR",
+                "file_name": "file:///D:/out/my_shot.exr",
+            }
+        ],
+        presets=[preset],
+    )
+    assert keys(after) == [], keys(after)
+
+
 if __name__ == "__main__":
     sys.exit(run(globals()))
