@@ -527,5 +527,107 @@ def test_no_matching_preset_means_no_change():
     assert name("OpenEXR", "") is None
 
 
+def test_sequence_preset_pattern_without_token_is_valid():
+    # The pattern may leave the token out, naming still adds it, so the
+    # result must validate or Repair could never resolve the failure.
+    preset = dict(EXR, name_pattern="{product_name}")
+    problems = validate(
+        [
+            {
+                "index": 1,
+                "format": "OpenEXR",
+                "file_name": "file:///D:/out/my_shot_[#####].exr",
+            }
+        ],
+        presets=[preset],
+    )
+    assert keys(problems) == [], keys(problems)
+
+
+def test_sequence_preset_pattern_without_token_is_repairable():
+    preset = dict(EXR, name_pattern="{product_name}")
+    repair_plan = plan(
+        [
+            {
+                "index": 1,
+                "format": "OpenEXR",
+                "file_name": "file:///D:/out/my_shot.exr",
+            }
+        ],
+        presets=[preset],
+    )
+    assert written(repair_plan) == [(1, "my_shot_[#####].exr", "")], written(
+        repair_plan
+    )
+    problems = validate(
+        [
+            {
+                "index": 1,
+                "format": "OpenEXR",
+                "file_name": "file:///D:/out/my_shot_[#####].exr",
+            }
+        ],
+        presets=[preset],
+    )
+    assert keys(problems) == [], keys(problems)
+
+
+def test_dotted_product_name_is_valid():
+    problems = validate(
+        [
+            {
+                "index": 1,
+                "format": "H.264",
+                "file_name": "file:///D:/out/my.shot.mp4",
+            }
+        ],
+        product_name="my.shot",
+    )
+    assert keys(problems) == [], keys(problems)
+
+
+def test_dotted_product_name_is_created():
+    assert (
+        name("H.264", "file:///D:/out/x.mp4", product_name="my.shot")
+        == "my.shot.mp4"
+    )
+
+
+def test_dotted_product_name_is_repaired():
+    repair_plan = plan(
+        [
+            {
+                "index": 1,
+                "format": "H.264",
+                "file_name": "file:///D:/out/wrong.mp4",
+            }
+        ],
+        product_name="my.shot",
+    )
+    assert written(repair_plan) == [(1, "my.shot.mp4", "")], written(
+        repair_plan
+    )
+
+
+def test_codec_is_named_when_no_preset_allows_it():
+    presets = [dict(PRORES, format="QuickTime", codec="ProRes 422 HQ")]
+    problems = validate(
+        [
+            {
+                "index": 1,
+                "format": "QuickTime",
+                "codec": "Animation",
+                "file_name": "file:///D:/out/my_shot.mov",
+            }
+        ],
+        presets=presets,
+    )
+    assert keys(problems) == ["not_allowed"], keys(problems)
+
+    message = problems[0].message.lower()
+    assert "animation" in message, message
+    assert "prores 422 hq" in message, message
+
+
 if __name__ == "__main__":
     sys.exit(run(globals()))

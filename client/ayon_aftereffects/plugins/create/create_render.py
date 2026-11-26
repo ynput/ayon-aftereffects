@@ -140,7 +140,8 @@ class RenderCreator(Creator):
             self._ensure_comp_in_render_queue(
                 stub=stub,
                 comp_id=comp.id,
-                product_name=comp_product_name
+                product_name=comp_product_name,
+                render_target=creator_attributes["render_target"]
             )
 
     def get_pre_create_attr_defs(self):
@@ -199,7 +200,11 @@ class RenderCreator(Creator):
         self._add_instance_to_context(new_instance)
 
     def _ensure_comp_in_render_queue(
-        self, stub: object, comp_id: int, product_name: str
+        self,
+        stub: object,
+        comp_id: int,
+        product_name: str,
+        render_target: str,
     ) -> None:
         """Ensure composition is present in After Effects render queue.
 
@@ -208,6 +213,8 @@ class RenderCreator(Creator):
             comp_id (int): Composition item id in After Effects.
             product_name (str): Product name, used for readable errors and
                 for the output file name.
+            render_target (str): Where the instance renders, 'local',
+                'farm' or 'frames' for existing frames.
 
         Raises:
             CreatorError: When composition cannot be queued.
@@ -224,10 +231,16 @@ class RenderCreator(Creator):
                 f"Failed to add '{product_name}' to render queue."
             )
 
-        self._apply_output_module_name(stub, comp_id, product_name)
+        self._apply_output_module_name(
+            stub, comp_id, product_name, render_target
+        )
 
     def _apply_output_module_name(
-        self, stub: object, comp_id: int, product_name: str
+        self,
+        stub: object,
+        comp_id: int,
+        product_name: str,
+        render_target: str,
     ) -> None:
         """Name the Output Module from the matching preset.
 
@@ -237,6 +250,10 @@ class RenderCreator(Creator):
         published. The presets already describe the expected name, so the
         instance is created correct instead of failing later.
 
+        Instances that publish existing frames are left alone: their files
+        are already on disk under the current name, and renaming the
+        Output Module would make those frames unrecognisable.
+
         Never raises: a missing preset, an older AYON extension or a host
         error must not stop the instance from being created.
 
@@ -244,7 +261,16 @@ class RenderCreator(Creator):
             stub (object): Connected After Effects server stub.
             comp_id (int): Composition item id in After Effects.
             product_name (str): Product name of the instance.
+            render_target (str): Where the instance renders.
         """
+        if render_target == "frames":
+            self.log.debug(
+                "Publishing existing frames of '%s', keeping the Output "
+                "Module name.",
+                product_name,
+            )
+            return
+
         presets = self._output_presets()
         if not presets:
             return

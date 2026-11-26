@@ -129,10 +129,13 @@ def describe_presets(presets: Iterable[Any]) -> str:
             for ext in (_get(preset, "extensions", None) or [])
             if str(ext).strip()
         ]
-        if extensions:
-            label = "{} ({})".format(
-                label, ", ".join("." + ext for ext in extensions)
-            )
+        details = []
+        codec = _text(_get(preset, "codec", ""))
+        if codec:
+            details.append(codec)
+        details.extend("." + ext for ext in extensions)
+        if details:
+            label = "{} ({})".format(label, ", ".join(details))
         labels.append(label)
 
     return "; ".join(labels) or "no presets configured"
@@ -424,6 +427,9 @@ def _validate_module(
         configured = (
             _get(module, "format", "") or actual.ext or "unknown"
         )
+        codec = _get(module, "codec", "")
+        if codec:
+            configured = "{} / {}".format(configured, codec)
         return [
             OutputProblem(
                 key="not_allowed",
@@ -549,8 +555,11 @@ def _validate_preset(
 
     expected_name = preset["name_pattern"]
     if expected_name and not frame_problem:
-        expected_display = expected_name.replace(
-            PRODUCT_NAME_TOKEN, product_name or ""
+        # Build the name the preset asks for with the same helper naming
+        # uses, so a sequence preset without a token in its pattern and a
+        # product name with dots are both compared correctly.
+        expected_display = _name_from_pattern(
+            product_name, preset, actual.ext
         )
         expected = parse_output_name(expected_display)
         if actual.stem != expected.stem:
@@ -640,9 +649,8 @@ def _plan_name(
     Returns:
         The planned write and a note about what it cannot fix.
     """
-    pattern = preset["name_pattern"] or PRODUCT_NAME_TOKEN
-    display = str(pattern).replace(PRODUCT_NAME_TOKEN, product_name or "")
-    stem, pattern_extension = _split_name(display)
+    pattern = str(preset["name_pattern"] or PRODUCT_NAME_TOKEN)
+    _, pattern_extension = _split_name(pattern)
 
     note = ""
     if template:
@@ -688,9 +696,9 @@ def _name_from_pattern(
         File name with the product name and, for sequence presets, the
         frame token with the configured padding.
     """
-    pattern = preset["name_pattern"] or PRODUCT_NAME_TOKEN
-    display = str(pattern).replace(PRODUCT_NAME_TOKEN, product_name or "")
-    stem, pattern_extension = _split_name(display)
+    pattern = str(preset["name_pattern"] or PRODUCT_NAME_TOKEN)
+    stem, pattern_extension = _split_name(pattern)
+    stem = stem.replace(PRODUCT_NAME_TOKEN, product_name or "")
 
     if preset["sequence"]:
         hashes = "#" * preset["padding"]
