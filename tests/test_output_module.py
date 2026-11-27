@@ -683,14 +683,6 @@ def test_token_in_a_single_file_preset_is_dropped():
     assert keys(after) == [], keys(after)
 
 
-def test_profile_output_reads_nested_settings():
-    profile = {"name": "exr", "output": dict(EXR)}
-    assert RULES.profile_output(profile)["format"] == "OpenEXR"
-    assert RULES.profile_output(None) == {}
-    assert RULES.profile_label(profile) == "exr"
-    assert RULES.profile_label({}) == "unnamed"
-
-
 def test_preset_name_sequence_gets_frame_token():
     name = RULES.preset_name(
         "my_shot", EXR, {"file_name": "/d/out/my_shot.exr"}

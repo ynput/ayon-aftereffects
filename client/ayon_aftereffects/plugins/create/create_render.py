@@ -148,8 +148,6 @@ class RenderCreator(Creator):
                 comp_id=comp.id,
                 product_name=comp_product_name,
                 render_target=creator_attributes["render_target"],
-                folder_path=instance_data["folderPath"],
-                task_name=instance_data.get("task"),
             )
 
     def get_pre_create_attr_defs(self):
@@ -213,8 +211,6 @@ class RenderCreator(Creator):
         comp_id: int,
         product_name: str,
         render_target: str,
-        folder_path: str,
-        task_name: str,
     ) -> None:
         """Ensure composition is present in After Effects render queue.
 
@@ -244,16 +240,18 @@ class RenderCreator(Creator):
                 f"Failed to add '{product_name}' to render queue."
             )
 
-        folder_entity = self.create_context.get_current_folder_entity()
-        task_entity = self.create_context.get_current_task_entity()
+        folder_entity = (
+            self.create_context.get_current_folder_entity() or {}
+        )
+        task_entity = self.create_context.get_current_task_entity() or {}
 
         self._apply_output_module_settings(
             stub,
             comp_id,
             product_name,
             render_target,
-            folder_entity["folderType"],
-            task_entity["taskType"],
+            folder_entity.get("folderType", ""),
+            task_entity.get("taskType", ""),
         )
 
     def _apply_output_module_settings(
@@ -303,9 +301,17 @@ class RenderCreator(Creator):
             keys_order=["folder_types", "task_types"],
             logger=self.log,
         )
-        preset = output_module.profile_output(profile)
-        template = str(preset.get("template") or "")
-        presets = [preset] if preset else self._output_presets()
+        if not profile:
+            self.log.warning(
+                "No matching Output Module profile found for folder type '%s' "
+                "and task type '%s'.",
+                folder_type,
+                task_type,
+            )
+            return
+
+        preset = (profile or {}).get("output") or {}
+        presets = [preset]
         if not presets:
             return
 
@@ -322,7 +328,8 @@ class RenderCreator(Creator):
             )
             return
 
-        for module in modules or []:
+        template = preset.get("template", "")
+        for module in modules:
             index = module.get("index", 1)
             if preset:
                 name = output_module.preset_name(
@@ -352,17 +359,16 @@ class RenderCreator(Creator):
                 )
                 continue
 
-            if profile:
-                self.log.info(
-                    "Applied Output Module profile '%s' to '%s': '%s'.",
-                    output_module.profile_label(profile),
-                    product_name,
-                    name,
-                )
-
             error = result.get("error") if isinstance(result, dict) else None
             if error:
                 self.log.warning("%s", error)
+            elif profile:
+                self.log.info(
+                    "Applied Output Module profile '%s' to '%s': '%s'.",
+                    profile.get("name", "unnamed"),
+                    product_name,
+                    name,
+                )
             else:
                 self.log.info(
                     "Output Module %s of '%s' writes '%s'.",
@@ -370,27 +376,6 @@ class RenderCreator(Creator):
                     product_name,
                     name,
                 )
-
-    @staticmethod
-    def _output_presets():
-        """Return the Output Module presets from project settings.
-
-        The presets are configured on the Validate Output Module plugin and
-        describe the allowed format, extension and file name per Output
-        Module, so they are used for naming as well.
-
-        Returns:
-            list[dict]: Preset settings, empty when not configured.
-        """
-        try:
-            project_settings = get_current_project_settings()
-        except Exception:
-            return []
-
-        after_effects = (project_settings or {}).get("aftereffects") or {}
-        publish_settings = after_effects.get("publish") or {}
-        plugin_settings = publish_settings.get("ValidateOutputModule") or {}
-        return plugin_settings.get("presets") or []
 
     def collect_instances(self):
         instances_by_comp_id = {}
@@ -474,7 +459,9 @@ class RenderCreator(Creator):
 
         project_name = self.create_context.get_current_project_name()
         project_entity = self.create_context.get_current_project_entity()
-        folder_entity = self.create_context.get_current_folder_entity()
+        folder_entity = (
+            self.create_context.get_current_folder_entity() or {}
+        )
         task_entity = self.create_context.get_current_task_entity()
 
         if not (project_name and project_entity and folder_entity):

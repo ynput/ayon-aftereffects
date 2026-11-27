@@ -299,32 +299,6 @@ def creation_name(
     )
 
 
-def profile_output(profile: Any) -> Any:
-    """Return the Output Module settings stored in a profile.
-
-    Args:
-        profile: Profile from the creator settings.
-
-    Returns:
-        Preset settings, empty when the profile does not define any.
-    """
-    if not profile:
-        return {}
-    return _get(profile, "output", None) or {}
-
-
-def profile_label(profile: Any) -> str:
-    """Return the display name of a profile.
-
-    Args:
-        profile: Profile from the creator settings.
-
-    Returns:
-        Profile name, or 'unnamed' when the profile has none.
-    """
-    return str(_get(profile, "name", "") or "").strip() or "unnamed"
-
-
 def preset_name(product_name: str, preset: Any, module: Any = None) -> str:
     """Build the file name a preset asks for, without matching the module.
 
