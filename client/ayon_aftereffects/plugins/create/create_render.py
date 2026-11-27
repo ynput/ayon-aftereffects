@@ -244,46 +244,17 @@ class RenderCreator(Creator):
                 f"Failed to add '{product_name}' to render queue."
             )
 
-        folder_type, task_type = self._context_types(folder_path, task_name)
+        folder_entity = self.create_context.get_current_folder_entity()
+        task_entity = self.create_context.get_current_task_entity()
+
         self._apply_output_module_settings(
             stub,
             comp_id,
             product_name,
             render_target,
-            folder_type,
-            task_type,
+            folder_entity["folderType"],
+            task_entity["taskType"],
         )
-
-    def _context_types(self, folder_path, task_name):
-        """Return the folder and task type of the instance context.
-
-        Args:
-            folder_path (str): Folder path of the instance context.
-            task_name (str): Task name, empty when the instance has none.
-
-        Returns:
-            tuple[str, str]: Folder type and task type, empty when they
-                cannot be resolved.
-        """
-        folder_type = ""
-        task_type = ""
-        try:
-            folder_entity = self.create_context.get_folder_entity(
-                folder_path=folder_path
-            )
-            folder_type = folder_entity.get("folderType") or ""
-            if task_name:
-                task_entity = self.create_context.get_task_entity(
-                    folder_path=folder_path, task_name=task_name
-                )
-                task_type = task_entity.get("taskType") or ""
-        except Exception:
-            self.log.debug(
-                "Cannot resolve the folder or task type of '%s'.",
-                folder_path,
-                exc_info=True,
-            )
-        return folder_type, task_type
 
     def _apply_output_module_settings(
         self,
@@ -381,16 +352,17 @@ class RenderCreator(Creator):
                 )
                 continue
 
-            error = result.get("error") if isinstance(result, dict) else None
-            if error:
-                self.log.warning("%s", error)
-            elif profile:
+            if profile:
                 self.log.info(
                     "Applied Output Module profile '%s' to '%s': '%s'.",
                     output_module.profile_label(profile),
                     product_name,
                     name,
                 )
+
+            error = result.get("error") if isinstance(result, dict) else None
+            if error:
+                self.log.warning("%s", error)
             else:
                 self.log.info(
                     "Output Module %s of '%s' writes '%s'.",
