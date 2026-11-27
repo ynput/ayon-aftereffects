@@ -59,6 +59,7 @@ DEFAULT_AFTEREFFECTS_SETTING = {
             "force_setting_values": True,
             "rename_comp_to_product_name": True,
             "sync_with_render_queue": False,
+            "output_module_profiles": [],
         }
     },
     "publish": AE_PUBLISH_PLUGINS_DEFAULTS,

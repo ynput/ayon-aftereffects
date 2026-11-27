@@ -683,5 +683,42 @@ def test_token_in_a_single_file_preset_is_dropped():
     assert keys(after) == [], keys(after)
 
 
+def test_preset_name_sequence_gets_frame_token():
+    name = RULES.preset_name(
+        "my_shot", EXR, {"file_name": "/d/out/my_shot.exr"}
+    )
+    assert name == "my_shot_[#####].exr", name
+
+
+def test_preset_name_keeps_current_extension():
+    name = RULES.preset_name(
+        "my_shot",
+        dict(EXR, extensions=[]),
+        {"file_name": "/d/out/other.exr"},
+    )
+    assert name == "my_shot_[#####].exr", name
+
+
+def test_preset_name_single_file_drops_frame_token():
+    name = RULES.preset_name(
+        "my_shot",
+        dict(MP4, name_pattern="{product_name}_[#####]"),
+        {"file_name": "/d/out/other.mp4"},
+    )
+    assert name == "my_shot.mp4", name
+
+
+def test_preset_name_uses_preset_extension_not_current_one():
+    name = RULES.preset_name(
+        "my_shot", EXR, {"file_name": "/d/out/other.mp4"}
+    )
+    assert name == "my_shot_[#####].exr", name
+
+
+def test_preset_name_uses_preset_extension():
+    name = RULES.preset_name("my_shot", EXR, {"file_name": "/d/out/x"})
+    assert name == "my_shot_[#####].exr", name
+
+
 if __name__ == "__main__":
     sys.exit(run(globals()))

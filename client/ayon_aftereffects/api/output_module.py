@@ -299,6 +299,32 @@ def creation_name(
     )
 
 
+def preset_name(product_name: str, preset: Any, module: Any = None) -> str:
+    """Build the file name a preset asks for, without matching the module.
+
+    A profile decides the Output Module up front, so the current format
+    must not decide the name: the configured pattern wins. The current
+    extension is kept when the preset does not name one.
+
+    Args:
+        product_name: Product name of the instance.
+        preset: Preset or profile output settings.
+        module: Output Module record, used to keep the current extension.
+
+    Returns:
+        File name with the frame token and padding the preset asks for.
+    """
+    normalized = _normalize_preset(preset)
+    if normalized["extensions"]:
+        # The profile changes the format, so the current extension of the
+        # Output Module is stale: the preset names the one to write.
+        extension = normalized["extensions"][0]
+    else:
+        actual = parse_output_name(_get(module, "file_name", "") or "")
+        extension = _real_extension(normalized, actual)
+    return _name_from_pattern(product_name, normalized, extension)
+
+
 def build_repair(
     product_name: str,
     modules: Iterable[Any],

@@ -1,6 +1,11 @@
 import re
 
-from ayon_core.lib import BoolDef, UISeparatorDef, EnumDef
+from ayon_core.lib import (
+    BoolDef,
+    EnumDef,
+    UISeparatorDef,
+    filter_profiles,
+)
 from ayon_core.pipeline import (
     Creator,
     CreatedInstance,
@@ -43,6 +48,7 @@ class RenderCreator(Creator):
     force_setting_values = True
     rename_comp_to_product_name = True
     sync_with_render_queue = False
+    output_module_profiles = []
 
     @staticmethod
     def _clean_composition_name(comp_name) -> str:
@@ -141,7 +147,7 @@ class RenderCreator(Creator):
                 stub=stub,
                 comp_id=comp.id,
                 product_name=comp_product_name,
-                render_target=creator_attributes["render_target"]
+                render_target=creator_attributes["render_target"],
             )
 
     def get_pre_create_attr_defs(self):
@@ -215,6 +221,9 @@ class RenderCreator(Creator):
                 for the output file name.
             render_target (str): Where the instance renders, 'local',
                 'farm' or 'frames' for existing frames.
+            folder_path (str): Folder path of the instance context.
+            task_name (str): Task name of the instance context, empty when
+                the instance has no task.
 
         Raises:
             CreatorError: When composition cannot be queued.
@@ -231,30 +240,43 @@ class RenderCreator(Creator):
                 f"Failed to add '{product_name}' to render queue."
             )
 
-        self._apply_output_module_name(
-            stub, comp_id, product_name, render_target
+        folder_entity = (
+            self.create_context.get_current_folder_entity() or {}
+        )
+        task_entity = self.create_context.get_current_task_entity() or {}
+
+        self._apply_output_module_settings(
+            stub,
+            comp_id,
+            product_name,
+            render_target,
+            folder_entity.get("folderType", ""),
+            task_entity.get("taskType", ""),
         )
 
-    def _apply_output_module_name(
+    def _apply_output_module_settings(
         self,
         stub: object,
         comp_id: int,
         product_name: str,
         render_target: str,
+        folder_type: str = "",
+        task_type: str = "",
     ) -> None:
-        """Name the Output Module from the matching preset.
+        """Apply the Output Module profile of the context.
 
-        AYON queues the composition with the bare product name, so a
-        sequence format becomes `name.exr00835` once After Effects appends
-        the frame number after the extension - a render that cannot be
-        published. The presets already describe the expected name, so the
-        instance is created correct instead of failing later.
+        The best matching profile decides the template, format and file
+        name, and is applied even when the file name already matches: the
+        template is what changes format and codec.
+
+        Without a matching profile the Output Module only gets the file
+        name the Validate Output Module presets expect, as before.
 
         Instances that publish existing frames are left alone: their files
         are already on disk under the current name, and renaming the
         Output Module would make those frames unrecognisable.
 
-        Never raises: a missing preset, an older AYON extension or a host
+        Never raises: a missing profile, an older AYON extension or a host
         error must not stop the instance from being created.
 
         Args:
@@ -262,16 +284,34 @@ class RenderCreator(Creator):
             comp_id (int): Composition item id in After Effects.
             product_name (str): Product name of the instance.
             render_target (str): Where the instance renders.
+            folder_type (str): Folder type of the instance context.
+            task_type (str): Task type of the instance context.
         """
         if render_target == "frames":
             self.log.debug(
                 "Publishing existing frames of '%s', keeping the Output "
-                "Module name.",
+                "Module settings.",
                 product_name,
             )
             return
 
-        presets = self._output_presets()
+        profile = filter_profiles(
+            self.output_module_profiles,
+            {"folder_types": folder_type, "task_types": task_type},
+            keys_order=["folder_types", "task_types"],
+            logger=self.log,
+        )
+        if not profile:
+            self.log.warning(
+                "No matching Output Module profile found for folder type '%s' "
+                "and task type '%s'.",
+                folder_type,
+                task_type,
+            )
+            return
+
+        preset = (profile or {}).get("output") or {}
+        presets = [preset]
         if not presets:
             return
 
@@ -288,54 +328,54 @@ class RenderCreator(Creator):
             )
             return
 
-        for module in modules or []:
-            name = output_module.creation_name(product_name, module, presets)
+        template = preset.get("template", "")
+        for module in modules:
+            index = module.get("index", 1)
+            if preset:
+                name = output_module.preset_name(
+                    product_name, preset, module
+                )
+            else:
+                name = output_module.creation_name(
+                    product_name, module, presets
+                )
             if not name:
                 continue
 
             current = output_module.parse_output_name(module.get("file_name"))
-            if name == current.name:
+            if name == current.name and not template:
                 continue
 
             try:
-                stub.fix_output_module(comp_id, module.get("index", 1), name)
+                result = stub.fix_output_module(
+                    comp_id, index, name, template
+                )
             except Exception:
                 self.log.warning(
-                    "Cannot name Output Module %s of '%s' as '%s'.",
-                    module.get("index", 1),
+                    "Cannot update Output Module %s of '%s'.",
+                    index,
                     product_name,
-                    name,
                     exc_info=True,
                 )
                 continue
 
-            self.log.info(
-                "Output Module %s of '%s' writes '%s'.",
-                module.get("index", 1),
-                product_name,
-                name,
-            )
-
-    @staticmethod
-    def _output_presets():
-        """Return the Output Module presets from project settings.
-
-        The presets are configured on the Validate Output Module plugin and
-        describe the allowed format, extension and file name per Output
-        Module, so they are used for naming as well.
-
-        Returns:
-            list[dict]: Preset settings, empty when not configured.
-        """
-        try:
-            project_settings = get_current_project_settings()
-        except Exception:
-            return []
-
-        after_effects = (project_settings or {}).get("aftereffects") or {}
-        publish_settings = after_effects.get("publish") or {}
-        plugin_settings = publish_settings.get("ValidateOutputModule") or {}
-        return plugin_settings.get("presets") or []
+            error = result.get("error") if isinstance(result, dict) else None
+            if error:
+                self.log.warning("%s", error)
+            elif profile:
+                self.log.info(
+                    "Applied Output Module profile '%s' to '%s': '%s'.",
+                    profile.get("name", "unnamed"),
+                    product_name,
+                    name,
+                )
+            else:
+                self.log.info(
+                    "Output Module %s of '%s' writes '%s'.",
+                    index,
+                    product_name,
+                    name,
+                )
 
     def collect_instances(self):
         instances_by_comp_id = {}
@@ -419,7 +459,9 @@ class RenderCreator(Creator):
 
         project_name = self.create_context.get_current_project_name()
         project_entity = self.create_context.get_current_project_entity()
-        folder_entity = self.create_context.get_current_folder_entity()
+        folder_entity = (
+            self.create_context.get_current_folder_entity() or {}
+        )
         task_entity = self.create_context.get_current_task_entity()
 
         if not (project_name and project_entity and folder_entity):
